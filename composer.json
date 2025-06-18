@@ -1,6 +1,6 @@
 {
   "name": "squehub/squehub",
-  "version": "1.0.2",
+  "version": "1.0.0",
   "description": "A modern, lightweight PHP framework designed for building scalable and elegant web applications with simplicity and flexibility.",
   "type": "project",
   "license": "MIT",
