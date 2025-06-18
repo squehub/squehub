@@ -60,7 +60,7 @@
   },
   "scripts": {
     "post-install-cmd": [
-      "php scripts/message"
+      "@php scripts/message"
     ]
   }
 }
