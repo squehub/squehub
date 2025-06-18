@@ -2,12 +2,13 @@
 /vendor/
 
 # Environment files
-.env
-.env.*
-!.env.example
+!.env         # ✅ Allow .env to be tracked
+!.env.example # ✅ Also allow .env.example
 
-!scripts/message
- 
+# CLI Welcome Message
+scripts/*
+!scripts/message.php
+
 # IDE/editor settings
 .vscode/
 .idea/
@@ -44,12 +45,6 @@ clis/*.lock
 *.tmp
 *.swp
 *.old
-
-# Custom Squehub project paths
-
-# Ignore everything in scripts/ EXCEPT message.php
-scripts/*
-!scripts/message.php
 
 # Ignore old backup config
 app/core/config.php.bak
