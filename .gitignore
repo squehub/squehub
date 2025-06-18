@@ -4,6 +4,7 @@
 # Environment files
 .env
 .env.*
+!.env.example
 
 # IDE/editor settings
 .vscode/
@@ -43,5 +44,10 @@ clis/*.lock
 *.old
 
 # Custom Squehub project paths
-scripts/
+
+# Ignore everything in scripts/ EXCEPT message.php
+scripts/*
+!scripts/message.php
+
+# Ignore old backup config
 app/core/config.php.bak
