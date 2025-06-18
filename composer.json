@@ -1,6 +1,6 @@
 {
   "name": "squehub/squehub",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A modern, lightweight PHP framework designed for building scalable and elegant web applications with simplicity and flexibility.",
   "type": "project",
   "license": "MIT",
@@ -59,7 +59,7 @@
     "filp/whoops": "^2.18"
   },
   "scripts": {
-    "post-install-cmd": [
+    "post-create-project-cmd": [
       "@php scripts/message"
     ]
   }
