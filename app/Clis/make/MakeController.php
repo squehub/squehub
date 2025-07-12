@@ -30,7 +30,7 @@ class MakeController extends Command
         }
 
         $subDir = implode('/', $segments);
-        $controllerDir = BASE_DIR . '/project/controllers' . ($subDir ? "/$subDir" : '');
+        $controllerDir = BASE_DIR . '/project/Controllers' . ($subDir ? "/$subDir" : '');
         $controllerFile = "$controllerDir/{$className}.php";
 
         if (file_exists($controllerFile)) {

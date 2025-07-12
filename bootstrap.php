@@ -38,7 +38,7 @@ if (!isset($_SESSION['_token'])) {
 }
 
 // ✅ Load framework global helper functions (e.g., csrf_token(), route(), etc.)
-$helperFile = __DIR__ . '/app/core/helper.php';
+$helperFile = __DIR__ . '/app/Core/Helper.php';
 if (file_exists($helperFile)) {
     require_once $helperFile;
 
@@ -47,7 +47,7 @@ if (file_exists($helperFile)) {
         echo storeUserTimezoneScript(); // Useful for datetime localization
     }
 } else {
-    error_log('❌ Missing helper file: app/core/helper.php');
+    error_log('❌ Missing helper file: app/Core/Helper.php');
 }
 
 // ✅ Initialize the router (central dispatcher for HTTP requests)
@@ -55,7 +55,7 @@ require_once __DIR__ . '/Router.php';
 $router = new Router();
 
 // ✅ Load project-specific route files recursively from /project/routes/
-$projectRoutesPath = __DIR__ . '/project/routes';
+$projectRoutesPath = __DIR__ . '/project/Routes';
 $projectRouteFiles = new RecursiveIteratorIterator(
     new RecursiveDirectoryIterator($projectRoutesPath)
 );
@@ -64,7 +64,7 @@ foreach (new RegexIterator($projectRouteFiles, '/\.php$/') as $routeFile) {
 }
 
 // ✅ Load core route files recursively from /app/routes/
-$appRoutesPath = __DIR__ . '/app/routes';
+$appRoutesPath = __DIR__ . '/app/Routes';
 $appRouteFiles = new RecursiveIteratorIterator(
     new RecursiveDirectoryIterator($appRoutesPath)
 );
@@ -73,10 +73,10 @@ foreach (new RegexIterator($appRouteFiles, '/\.php$/') as $routeFile) {
 }
 
 // ✅ Load custom debug error handler (for formatting, logging, graceful fallback)
-$debugFile = __DIR__ . '/app/core/Exceptions/debug.php';
+$debugFile = __DIR__ . '/app/Core/Exceptions/Debug.php';
 if (file_exists($debugFile)) {
     require_once $debugFile;
 } else {
-    error_log('❌ Missing debug.php file in app/core/Exceptions/');
+    error_log('❌ Missing debug.php file in app/Core/Exceptions/');
     exit('Required debug file not found. Exiting.');
 }

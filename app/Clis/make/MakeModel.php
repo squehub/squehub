@@ -12,7 +12,7 @@ class MakeModel extends Command
 
     protected function configure()
     {
-        $this->setDescription('Generate a new model class in project/models/')
+        $this->setDescription('Generate a new model class in project/Models/')
              ->addArgument('name', InputArgument::REQUIRED, 'The name of the model (e.g., User or Blog/Post)');
     }
 
@@ -29,7 +29,7 @@ class MakeModel extends Command
             return Command::FAILURE;
         }
 
-        $baseDir = BASE_DIR . '/project/models';
+        $baseDir = BASE_DIR . '/project/Models';
         $targetDir = $relativePath ? "$baseDir/$relativePath" : $baseDir;
         $targetFile = "$targetDir/$modelName.php";
 
