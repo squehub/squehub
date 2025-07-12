@@ -30,7 +30,6 @@ Click the **Fork** button on the top right of [https://github.com/squehub/squehu
 
 ### 2. Clone Your Fork
 
-```bash
 git clone https://github.com/your-username/squehub.git
 cd squehub
 
