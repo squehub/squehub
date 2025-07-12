@@ -31,7 +31,7 @@ public static function render($view, $data = [])
         return self::renderErrorPage($errorMessage);
     }
 
-    extract($data); // Extract variables for the view
+    extract($data); // Extract variables for the view.
 
     // Capture the output of the view file.
     ob_start();

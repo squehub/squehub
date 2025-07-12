@@ -33,6 +33,7 @@ class Controller
     /**
      * Retrieve all middleware assigned to this controller.
      *
+     * 
      * @return array
      */
     public function getMiddleware()

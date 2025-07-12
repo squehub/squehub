@@ -5,7 +5,7 @@ namespace App\Core\Exceptions;
 use Whoops\Run;
 use App\Core\Exceptions\CustomPrettyPageHandler;
 
-// ✅ Register a custom Whoops handler globally for development error display
+// ✅ Register a custom Whoops handler globally for development error display.
 $whoops = new Run();
 $whoops->pushHandler(new CustomPrettyPageHandler());
 $whoops->register();
