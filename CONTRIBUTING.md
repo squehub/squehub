@@ -107,7 +107,6 @@ Once your changes are ready:
 
 Push your branch:
 
-```bash
 git push origin feature/my-awesome-feature
 Go to your fork on GitHub and click "Compare & pull request".
 
@@ -131,7 +130,7 @@ Ensure all relevant features work as expected.
 If needed, update tests or add new ones.
 
 Run:
-```bash
+
 composer dump-autoload
 🐛 Reporting Bugs
 If you're unable to contribute code but found a bug:
