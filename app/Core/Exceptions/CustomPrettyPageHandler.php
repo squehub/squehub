@@ -17,20 +17,17 @@ class CustomPrettyPageHandler extends PrettyPageHandler
      */
     public function handle()
     {
-        // ✅ Debug helper: Write to file so we can confirm this handler is being used
+        // Debug helper: Write to file so we can confirm this handler is being used
         file_put_contents(__DIR__ . '/whoops-debug.log', "CustomPrettyPageHandler used\n", FILE_APPEND);
 
-        // If the handler shouldn't run under current context (e.g., not web), exit
         if (!$this->handleUnconditionally()) {
             if (PHP_SAPI === 'cli') {
                 return Handler::DONE;
             }
         }
 
-        // ✅ Load custom error layout template
         $templateFile = $this->getResource("views/layout.html.php");
 
-        // ✅ Prepare data and assets to pass to the template
         $vars = [
             "page_title" => $this->getPageTitle(),
             "stylesheet" => file_get_contents($this->getResource("css/whoops.base.css")),
@@ -40,7 +37,6 @@ class CustomPrettyPageHandler extends PrettyPageHandler
             "clipboard"  => file_get_contents($this->getResource("js/clipboard.min.js")),
             "javascript" => file_get_contents($this->getResource("js/whoops.base.js")),
 
-            // ✅ Include view fragments
             "header"     => $this->getResource("views/header.html.php"),
             "header_outer" => $this->getResource("views/header_outer.html.php"),
             "frame_list" => $this->getResource("views/frame_list.html.php"),
@@ -53,7 +49,6 @@ class CustomPrettyPageHandler extends PrettyPageHandler
             "frame_code" => $this->getResource("views/frame_code.html.php"),
             "env_details" => $this->getResource("views/env_details.html.php"),
 
-            // ✅ Exception details
             "title" => $this->getPageTitle(),
             "name" => explode("\\", $this->getInspector()->getExceptionName()),
             "message" => $this->getInspector()->getExceptionMessage(),
@@ -67,34 +62,54 @@ class CustomPrettyPageHandler extends PrettyPageHandler
             "handler" => $this,
             "handlers" => $this->getRun()->getHandlers(),
 
-            // ✅ Determine which tab to show by default (application vs all frames)
             "active_frames_tab" => count($this->getExceptionFrames()) && $this->getExceptionFrames()->offsetGet(0)->isApplication() ? 'application' : 'all',
             "has_frames_tabs" => $this->getApplicationPaths(),
 
-            // ✅ Filtered input/output variables for safety
+            // Use custom maskArray to filter sensitive data
             "tables" => [
-                "GET Data"            => $this->masked($_GET, '_GET'),
-                "POST Data"           => $this->masked($_POST, '_POST'),
-                "Files"               => isset($_FILES) ? $this->masked($_FILES, '_FILES') : [],
-                "Cookies"             => $this->masked($_COOKIE, '_COOKIE'),
-                "Session"             => isset($_SESSION) ? $this->masked($_SESSION, '_SESSION') : [],
-                "Server/Request Data" => $this->masked($_SERVER, '_SERVER'),
-                // "Environment Variables" => $this->masked($_ENV, '_ENV'), // ❌ Removed for security
+                "GET Data"            => $this->maskArray($_GET),
+                "POST Data"           => $this->maskArray($_POST),
+                "Files"               => isset($_FILES) ? $this->maskArray($_FILES) : [],
+                "Cookies"             => $this->maskArray($_COOKIE),
+                "Session"             => isset($_SESSION) ? $this->maskArray($_SESSION) : [],
+                "Server/Request Data" => $this->maskArray($_SERVER),
             ],
         ];
 
-        // ✅ Optional: Embed a plain-text version of the exception inside HTML comments
         $plainTextHandler = new PlainTextHandler();
         $plainTextHandler->setRun($this->getRun());
         $plainTextHandler->setException($this->getException());
         $plainTextHandler->setInspector($this->getInspector());
         $vars["preface"] = "<!--\n\n\n" . $this->templateHelper->escape($plainTextHandler->generateResponse()) . "\n\n\n\n\n\n\n\n\n\n\n-->";
 
-        // ✅ Pass data to template and render it
         $this->templateHelper->setVariables($vars);
         $this->templateHelper->render($templateFile);
 
-        // ✅ Stop further handling; output has been rendered
         return Handler::QUIT;
+    }
+
+    /**
+     * Recursively masks sensitive data in arrays to protect secrets.
+     *
+     * @param array $array
+     * @param string $context Optional, for future context-based masking
+     * @return array
+     */
+    private function maskArray(array $array, string $context = ''): array
+    {
+        $masked = [];
+        $sensitiveKeys = ['password', 'passwd', 'secret', 'token', 'api_key', 'apikey', 'auth', 'authorization'];
+
+        foreach ($array as $key => $value) {
+            if (in_array(strtolower($key), $sensitiveKeys, true)) {
+                $masked[$key] = '***';
+            } elseif (is_array($value)) {
+                $masked[$key] = $this->maskArray($value, $context);
+            } else {
+                $masked[$key] = $value;
+            }
+        }
+
+        return $masked;
     }
 }

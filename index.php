@@ -1,6 +1,13 @@
 <?php
 // index.php
 
+// Enforce minimum PHP version 8.0
+if (version_compare(PHP_VERSION, '8.2.0', '<')) {
+    http_response_code(500);
+    exit('Squehub requires PHP 8.2 or higher. You are running PHP ' . PHP_VERSION);
+}
+
+
 // Turn on error reporting
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -27,7 +34,7 @@ if (file_exists($databaseFile)) {
 }
 
 // Define the path to the bootstrap file (handles routes, middleware, etc.)
-$bootstrapFile = __DIR__ . '/bootstrap.php';
+$bootstrapFile = __DIR__ . '/Bootstrap.php';
 
 // Check if the bootstrap.php file exists
 if (file_exists($bootstrapFile)) {

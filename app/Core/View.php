@@ -7,75 +7,125 @@ use App\Components\ControlStructuresComponent;
 
 class View
 {
-    protected static $viewPath = BASE_DIR . '/views/';
+    protected static $viewPaths = []; // hold multiple view paths
     protected static $sections = [];
-    protected static $sectionStack = []; // For nested sections
+    protected static $sectionStack = [];
     protected static $currentSection = null;
-    protected static $parentView = null; // To track layouts/extensions
+    protected static $parentView = null;
 
-/**
- * Render a view file.
- *
- * @param string $view The view name (e.g., 'home' or 'layouts.main').
- * @param array $data Data to pass to the view.
- * @throws \Exception If the view file is not found.
- */
-public static function render($view, $data = [])
-{
-    $viewFilePath = self::getViewPath($view);
+    public static function initViewPaths()
+    {
+        // Include the main /views directory at project root (e.g., Root/views/)
+        self::$viewPaths[] = BASE_DIR . '/views/';
 
-    // Check if the view file exists
-    if (!file_exists($viewFilePath)) {
-        // Custom error message with more context
-        $errorMessage = "The view file '{$viewFilePath}' was not found. Please ensure that the view exists in the correct directory.";
-        return self::renderErrorPage($errorMessage);
+        // Also include /project/views/ (e.g., Root/project/Views/)
+        $projectViewsPath = BASE_DIR . '/project/Views/';
+        if (is_dir($projectViewsPath)) {
+            self::$viewPaths[] = $projectViewsPath;
+        }
+
+        // Scan all packages inside /project/Packages/* and include their Vviews/ folders
+        $packagesDir = BASE_DIR . '/project/Packages/';
+        if (is_dir($packagesDir)) {
+            foreach (scandir($packagesDir) as $package) {
+                if ($package === '.' || $package === '..') {
+                    continue;
+                }
+
+                $possibleViewPath = $packagesDir . $package . '/Views/';
+                if (is_dir($possibleViewPath)) {
+                    self::$viewPaths[] = $possibleViewPath;
+                }
+            }
+        }
     }
 
-    extract($data); // Extract variables for the view.
 
-    // Capture the output of the view file.
-    ob_start();
-    require $viewFilePath;
-    $content = ob_get_clean();
-
-    // Process Blade-like syntax
-    $parsedContent = self::processBladeSyntax($content);
-
-    // Handle @extends to load layouts while keeping the passed data
-    if (self::$parentView) {
-        $layout = self::$parentView;
-        self::$parentView = null; // Reset after use.
-
-        // Store parsed content as 'content' section
-        self::$sections['content'] = $parsedContent;
-
-        // Render the parent layout with the same data
-        return self::render($layout, $data);
+    public static function getViewPaths()
+    {
+        // Lazy init to populate paths once
+        if (empty(self::$viewPaths)) {
+            self::initViewPaths();
+        }
+        return self::$viewPaths;
     }
 
-    // Replace yield placeholders in the final content with buffered sections.
-    foreach (self::$sections as $section => $sectionContent) {
-        $parsedContent = str_replace("<?php \App\Core\View::yieldSection('$section'); ?>", $sectionContent, $parsedContent);
+    // Example method that tries to find a view file in the registered paths
+    public static function findViewFile($viewName)
+    {
+        foreach (self::getViewPaths() as $path) {
+            $fullPath = $path . $viewName . '.php';
+            if (file_exists($fullPath)) {
+                return $fullPath;
+            }
+        }
+        return false;
     }
 
-    // Execute the parsed content with extracted variables
-    self::executeParsedContent($parsedContent, $data);
-}
+
+    /**
+     * Render a view file.
+     *
+     * @param string $view The view name (e.g., 'home' or 'layouts.main').
+     * @param array $data Data to pass to the view.
+     * @throws \Exception If the view file is not found.
+     */
+    public static function render($view, $data = [])
+    {
+        $viewFilePath = self::getViewPath($view);
+
+        // Check if the view file exists
+        if (!file_exists($viewFilePath)) {
+            // Custom error message with more context
+            $errorMessage = "The view file '{$viewFilePath}' was not found. Please ensure that the view exists in the correct directory.";
+            return self::renderErrorPage($errorMessage);
+        }
+
+        extract($data); // Extract variables for the view.
+
+        // Capture the output of the view file.
+        ob_start();
+        require $viewFilePath;
+        $content = ob_get_clean();
+
+        // Process Blade-like syntax
+        $parsedContent = self::processBladeSyntax($content);
+
+        // Handle @extends to load layouts while keeping the passed data
+        if (self::$parentView) {
+            $layout = self::$parentView;
+            self::$parentView = null; // Reset after use.
+
+            // Store parsed content as 'content' section
+            self::$sections['content'] = $parsedContent;
+
+            // Render the parent layout with the same data
+            return self::render($layout, $data);
+        }
+
+        // Replace yield placeholders in the final content with buffered sections.
+        foreach (self::$sections as $section => $sectionContent) {
+            $parsedContent = str_replace("<?php \App\Core\View::yieldSection('$section'); ?>", $sectionContent, $parsedContent);
+        }
+
+        // Execute the parsed content with extracted variables
+        self::executeParsedContent($parsedContent, $data);
+    }
 
 
 
 
-/**
- * Render an error page with a custom message.
- *
- * @param string $message The error message to display.
- * @return string The rendered error page.
- */
-private static function renderErrorPage($message)
-{
-    // You can define a custom view for displaying errors
-    return "<html><body><h1>Error</h1><p>$message</p></body></html>";
-}
+    /**
+     * Render an error page with a custom message.
+     *
+     * @param string $message The error message to display.
+     * @return string The rendered error page.
+     */
+    private static function renderErrorPage($message)
+    {
+        // You can define a custom view for displaying errors
+        return "<html><body><h1>Error</h1><p>$message</p></body></html>";
+    }
 
 
 
@@ -203,13 +253,23 @@ private static function renderErrorPage($message)
     /**
      * Get the full path to a view file.
      *
-     * @param string $view The view name.
-     * @return string The full path to the view file.
+     * @param string $view The view name (dot notation supported).
+     * @return string|false The full path to the view file if found, or false if not found.
      */
     private static function getViewPath($view)
     {
-        return self::$viewPath . str_replace('.', '/', $view) . '.squehub.php';
+        $viewFile = str_replace('.', '/', $view) . '.squehub.php';
+
+        foreach (self::getViewPaths() as $path) {
+            $fullPath = rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $viewFile;
+            if (file_exists($fullPath)) {
+                return $fullPath;
+            }
+        }
+
+        return false; // View file not found in any of the paths
     }
+
 
     /**
      * Process Blade-like syntax into PHP code.
@@ -257,7 +317,7 @@ private static function renderErrorPage($message)
         $content = preg_replace('/@elseif\s*\((.*?)\)/s', '<?php elseif ($1): ?>', $content);
         $content = preg_replace('/@else/s', '<?php else: ?>', $content);
         $content = preg_replace('/@endif/s', '<?php endif; ?>', $content);
-            
+
 
         // Handle loops
         $content = preg_replace('/@foreach\s*\((.*?)\)/s', '<?php foreach ($1): ?>', $content);
