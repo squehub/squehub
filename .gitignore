@@ -7,7 +7,7 @@
 
 # CLI Welcome Message
 scripts/*
-!scripts/message.php
+!scripts/message
 
 # IDE/editor settings
 .vscode/
