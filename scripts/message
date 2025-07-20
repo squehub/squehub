@@ -1,0 +1,74 @@
+<?php
+echo "\n";
+echo "                                                                      \n";
+echo " $$$$$$\   $$$$$$\  $$\   $$\ $$$$$$$$\ $$\   $$\ $$\   $$\ $$$$$$$\  \n";
+echo "$$  __$$\ $$  __$$\ $$ |  $$ |$$  _____|$$ |  $$ |$$ |  $$ |$$  __$$\ \n";
+echo "$$ /  \__|$$ /  $$ |$$ |  $$ |$$ |      $$ |  $$ |$$ |  $$ |$$ |  $$ |\n";
+echo "\$$$$$$\  $$ |  $$ |$$ |  $$ |$$$$$\    $$$$$$$$ |$$ |  $$ |$$$$$$$\ |\n";
+echo " \____$$\ $$ |  $$ |$$ |  $$ |$$  __|   $$  __$$ |$$ |  $$ |$$  __$$\ \n";
+echo "$$\   $$ |$$ $$\$$ |$$ |  $$ |$$ |      $$ |  $$ |$$ |  $$ |$$ |  $$ |\n";
+echo "\$$$$$$  |\$$$$$$ / \$$$$$$  |$$$$$$$$\ $$ |  $$ |\$$$$$$  |$$$$$$$  |\n";
+echo " \______/  \___$$$\  \______/ \________|\__|  \__| \______/ \_______/ \n";
+echo "               \___|                                                  \n";
+echo "                                                                      \n";
+echo "\n";
+echo "                  ✨ The Lightweight PHP Framework ✨\n";
+echo "=============================================================================================\n";
+echo "⭐ Welcome to the SQUEHUB PHP Framework — lightweight & modern for developers!\n";
+echo "=============================================================================================\n";
+echo "\n";
+echo "🎉 Thank you for choosing SQUEHUB!\n";
+echo "✨ SQUEHUB is a lightweight PHP framework built for clarity, speed, and simplicity.\n";
+echo "\n";
+echo "🚀 Quick Start Commands:\n";
+echo "  🌐 Start development server:     php squehub start\n";
+echo "  📦 Run database migrations:      php squehub migrate\n";
+echo "  🧩 Publish vendor package:       php squehub vendor:publish\n";
+echo "  📖 View available commands:      php squehub help\n";
+
+echo "\n";
+echo "🔧 Development Tools:\n";
+echo "  🛠  Make new controller:         php squehub make:controller ControllerName\n";
+echo "                                   └─ e.g., php squehub make:controller Blog/PostController\n";
+echo "  🧩  Make new model:              php squehub make:model ModelName\n";
+echo "                                   └─ e.g., php squehub make:model Blog/Post\n";
+echo "  🛠  Make new middleware:         php squehub make:middleware AuthMiddleware\n";
+echo "                                   └─ e.g., php squehub make:middleware Auth\AuthMiddleware\n";
+echo "  🛠  Make new migration:          php squehub make:migration create_users_table\n";
+echo "  📤 Make new dumpper:            php squehub make:dumper AdminUserDumper\n";
+
+
+echo "\n";
+echo "📂 Database Management:\n";
+echo "  📦 Run all migrations:           php squehub migrate\n";
+echo "  ❌ Rollback latest migration:    php squehub migrate:rollback\n";
+echo "  🔄 Reset migrations:             php squehub migrate:reset\n";
+echo "  🧪 Dump dummy data:              php squehub dump:run AdminUserDumper\n";
+echo "  ❌ Rollback latest Dump data:    php squehub dump:rollback AdminUserDumper\n";
+
+
+echo "\n";
+echo "📦 Package & Vendor Management:\n";
+echo "  📤 Publish vendor config/files:  php squehub vendor:publish\n";
+echo "  🔍 Discover packages:            php squehub discover\n";
+
+echo "\n";
+echo "🧰 Utilities:\n";
+echo "  🔐 Generate app key:             php squehub key:generate\n";
+echo "  🧼 Clear cache:                  php squehub cache:clear\n";
+echo "  🧹 Clear compiled files:         php squehub clear\n";
+
+echo "\n";
+echo "👨‍💻 Help & Documentation:\n";
+echo "  📖 View CLI usage:               php squehub help\n";
+echo "  📘 Official Docs:                https://github.com/squehub/squehub\n";
+
+echo "\n";
+echo "📚 Documentation & GitHub:\n";
+echo "   🔗 https://github.com/squehub/squehub\n";
+echo "\n";
+echo "🎯 Happy coding! Let’s build something amazing together.\n";
+echo "=============================================================================================\n";
+echo "\n";
+
+?>
