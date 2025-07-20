@@ -1,0 +1,50 @@
+# Composer dependencies
+/vendor/
+
+# Environment files
+!.env         # ✅ Allow .env to be tracked
+!.env.example # ✅ Also allow .env.example
+
+# CLI Welcome Message
+scripts/*
+!scripts/message.php
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.sublime-*
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+logs/
+storage/logs/
+
+# Cache, sessions, and temporary data
+cache/
+tmp/
+storage/cache/
+storage/sessions/
+storage/views/
+
+# CLI-generated files
+*.dump
+*.dmp
+*.lock
+clis/*.lock
+
+# Database dumps
+*.sql
+*.sqlite
+
+# Backup and temporary files
+*.bak
+*.tmp
+*.swp
+*.old
+
+# Ignore old backup config
+app/core/config.php.bak
