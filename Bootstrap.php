@@ -100,9 +100,24 @@ if (file_exists($debugFile)) {
 }
 
 // -----------------------------
-// Load Package Utility Helpers
+// Load Package and Project Utility Helpers
 // -----------------------------
-// Automatically include all PHP files inside 'Utils' directories of each package
+
+$packagesBaseDir = __DIR__ . '/project/packages/';
+$projectUtilsDir = __DIR__ . '/project/Utils/';
+
+// Load Utils from project-level Utils directory first (if exists)
+if (is_dir($projectUtilsDir)) {
+    foreach (new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($projectUtilsDir)
+    ) as $file) {
+        if ($file->isFile() && strtolower($file->getExtension()) === 'php') {
+            require_once $file->getRealPath();
+        }
+    }
+}
+
+// Load Utils from each package's Utils directory
 foreach (new DirectoryIterator($packagesBaseDir) as $packageDir) {
     if ($packageDir->isDot() || !$packageDir->isDir()) {
         continue;
@@ -119,3 +134,4 @@ foreach (new DirectoryIterator($packagesBaseDir) as $packageDir) {
         }
     }
 }
+
