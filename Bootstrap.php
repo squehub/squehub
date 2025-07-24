@@ -103,7 +103,7 @@ if (file_exists($debugFile)) {
 // Load Package and Project Utility Helpers
 // -----------------------------
 
-$packagesBaseDir = __DIR__ . '/project/packages/';
+$packagesBaseDir = __DIR__ . '/project/Packages/';
 $projectUtilsDir = __DIR__ . '/project/Utils/';
 
 // Load Utils from project-level Utils directory first (if exists)
