@@ -259,7 +259,6 @@ $dumperCommand->setDescription('Run a specified Dumper class from database/dumpe
 $application->add($dumperCommand);
 
 
-
 $rollbackCommand = new Command('dump:rollback');
 $rollbackCommand->setDescription('Rollback a Dumper class from database/dumper/')
     ->addArgument('class', InputArgument::REQUIRED, 'The name of the Dumper class to rollback')
@@ -305,7 +304,6 @@ $rollbackCommand->setDescription('Rollback a Dumper class from database/dumper/'
 $application->add($rollbackCommand);
 
 
-
 // Register make:controller command
 $application->add(new \App\Clis\Make\MakeController());
 $application->add(new \App\Clis\Make\MakeModel());
@@ -313,8 +311,163 @@ $application->add(new \App\Clis\Make\MakeMigration());
 $application->add(new \App\Clis\Make\MakeMiddleware());
 $application->add(new \App\Clis\Make\MakeDumper());
 
+// install Package command
+$packageInstallCommand = new Command('package:install');
+$packageInstallCommand->setDescription('Install a package from GitHub into project/packages/')
+    ->addArgument('repo', InputArgument::REQUIRED, 'GitHub repo URL (e.g., https://github.com/vendor/package)')
+    ->setCode(function (InputInterface $input, OutputInterface $output) {
+        $repo = rtrim($input->getArgument('repo'), '/');
+        $parts = explode('/', $repo);
+        $packageName = end($parts);
+
+        $targetDir = BASE_DIR . "/project/packages/{$packageName}";
+
+        if (is_dir($targetDir)) {
+            $output->writeln("<comment>Package '{$packageName}' is already installed in '{$targetDir}'. Skipping installation.</comment>");
+            return Command::SUCCESS;
+        }
+
+        $output->writeln("Cloning {$repo} into {$targetDir}...");
+
+        // Run git clone
+        $process = new Process(['git', 'clone', $repo, $targetDir]);
+        $process->run();
+
+        if (!$process->isSuccessful()) {
+            $output->writeln("<error>Failed to clone repo:</error>");
+            $output->writeln($process->getErrorOutput());
+            return Command::FAILURE;
+        }
+
+        $output->writeln("<info>Package installed successfully!</info>");
+
+        // Read package composer.json
+        $composerJsonPath = $targetDir . '/composer.json';
+        if (file_exists($composerJsonPath)) {
+            $composerData = json_decode(file_get_contents($composerJsonPath), true);
+
+            $name = $composerData['name'] ?? 'N/A';
+            $description = $composerData['description'] ?? 'No description provided.';
+            $authors = $composerData['authors'] ?? [];
+
+            $output->writeln("\n<info>Package Details:</info>");
+            $output->writeln("Name: $name");
+            $output->writeln("Description: $description");
+
+            if (!empty($authors)) {
+                $output->writeln("Authors:");
+                foreach ($authors as $author) {
+                    $authorName = $author['name'] ?? 'Unknown';
+                    $authorEmail = $author['email'] ?? 'No email';
+                    $output->writeln(" - $authorName <$authorEmail>");
+                }
+            } else {
+                $output->writeln("Authors: None specified.");
+            }
+        } else {
+            $output->writeln("<comment>No composer.json found in the package directory.</comment>");
+        }
+
+        // Optionally run composer dump-autoload to refresh autoloading
+        $output->writeln("\nRefreshing Composer autoload...");
+        $dumpProcess = new Process(['composer', 'dump-autoload']);
+        $dumpProcess->setWorkingDirectory(BASE_DIR);
+        $dumpProcess->run();
+
+        if (!$dumpProcess->isSuccessful()) {
+            $output->writeln("<error>Failed to run composer dump-autoload:</error>");
+            $output->writeln($dumpProcess->getErrorOutput());
+            return Command::FAILURE;
+        }
+
+        $output->writeln("<info>Composer autoload refreshed.</info>");
+        return Command::SUCCESS;
+    });
+
+$application->add($packageInstallCommand);
+
+// remove Package command
+$packageRemoveCommand = new Command('package:remove');
+$packageRemoveCommand->setDescription('Remove a package from project/packages/ by name')
+    ->addArgument('name', InputArgument::REQUIRED, 'The package folder name to remove')
+    ->setCode(function (InputInterface $input, OutputInterface $output) {
+        $packageName = $input->getArgument('name');
+        $targetDir = BASE_DIR . "/project/packages/{$packageName}";
+
+        if (!is_dir($targetDir)) {
+            $output->writeln("<error>Package '{$packageName}' is not installed in '{$targetDir}'.</error>");
+            return Command::FAILURE;
+        }
+
+        $output->writeln("Removing package '{$packageName}' from '{$targetDir}'...");
+
+        // Cross-platform recursive directory delete function
+        $deleteFolder = function ($folder) use (&$deleteFolder, $output) {
+            if (!is_dir($folder)) {
+                return;
+            }
+            $files = array_diff(scandir($folder), ['.', '..']);
+            foreach ($files as $file) {
+                $path = $folder . DIRECTORY_SEPARATOR . $file;
+                if (is_dir($path)) {
+                    $deleteFolder($path);
+                } else {
+                    // Try to make file writable before unlinking
+                    @chmod($path, 0777);
+                    if (!@unlink($path)) {
+                        $output->writeln("<comment>Warning: Could not delete file: {$path}</comment>");
+                    }
+                }
+            }
+            // Make folder writable before removing
+            @chmod($folder, 0777);
+            if (!@rmdir($folder)) {
+                $output->writeln("<comment>Warning: Could not remove directory: {$folder}</comment>");
+            }
+        };
+
+        // Remove .git folder first if exists to avoid permission issues
+        $gitDir = $targetDir . DIRECTORY_SEPARATOR . '.git';
+        if (is_dir($gitDir)) {
+            $output->writeln("Removing .git directory...");
+            $deleteFolder($gitDir);
+            if (is_dir($gitDir)) {
+                $output->writeln("<comment>Warning: Failed to completely remove .git directory.</comment>");
+            }
+        }
+
+        // Delete the package folder itself
+        $deleteFolder($targetDir);
+
+        if (is_dir($targetDir)) {
+            $output->writeln("<error>Failed to completely remove package directory '{$targetDir}'.</error>");
+            return Command::FAILURE;
+        }
+
+        $output->writeln("<info>Package '{$packageName}' has been removed.</info>");
+
+        // Run composer dump-autoload to refresh autoloading
+        $output->writeln("Refreshing Composer autoload...");
+        $dumpProcess = new Process(['composer', 'dump-autoload']);
+        $dumpProcess->setWorkingDirectory(BASE_DIR);
+        $dumpProcess->run();
+
+        if (!$dumpProcess->isSuccessful()) {
+            $output->writeln("<error>Failed to run composer dump-autoload:</error>");
+            $output->writeln($dumpProcess->getErrorOutput());
+            return Command::FAILURE;
+        }
+
+        $output->writeln("<info>Composer autoload refreshed.</info>");
+
+        return Command::SUCCESS;
+    });
+
+$application->add($packageRemoveCommand);
 
 
+
+//helper command
 $helpCommand = new Command('help');
 $helpCommand->setDescription('Show help information.')
     ->setCode(function (InputInterface $input, OutputInterface $output) use ($application) {
