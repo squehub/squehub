@@ -249,21 +249,44 @@ class Router
      */
     private function callControllerMethod($controller, $action, $params = [])
     {
-        // Replace slashes with namespace separator
-        $controllerClass = 'Project\\Controllers\\' . str_replace(['/', '\\'], '\\', $controller);
+        $controllerPath = str_replace(['/', '\\'], '\\', $controller);
 
-        if (class_exists($controllerClass)) {
-            $controllerInstance = new $controllerClass();
-            if (method_exists($controllerInstance, $action)) {
-                return call_user_func_array([$controllerInstance, $action], $params);
-            } else {
-                return "Action '$action' not found in '$controllerClass'.";
+        // Default namespace
+        $namespaces = [
+            'Project\\Controllers\\' . $controllerPath,
+        ];
+
+        // Use BASE_DIR constant for absolute path to Packages folder
+        $packageBaseDir = BASE_DIR . '/Project/Packages/';
+
+
+        if (is_dir($packageBaseDir)) {
+            foreach (scandir($packageBaseDir) as $packageName) {
+                if ($packageName === '.' || $packageName === '..') {
+                    continue;
+                }
+
+                $controllerClass = 'Project\\Packages\\' . $packageName . '\\Controllers\\' . $controllerPath;
+                $namespaces[] = $controllerClass;
             }
         } else {
-            return "Controller '$controllerClass' not found.";
+            echo "⚠️ Packages directory not found at: $packageBaseDir\n";
         }
-    }
 
+        foreach ($namespaces as $controllerClass) {
+
+            if (class_exists($controllerClass)) {
+                $controllerInstance = new $controllerClass();
+                if (method_exists($controllerInstance, $action)) {
+                    return call_user_func_array([$controllerInstance, $action], $params);
+                } else {
+                    return "Action '$action' not found in '$controllerClass'.";
+                }
+            }
+        }
+
+        return "Controller '$controller' not found in any known namespaces.";
+    }
 
     /**
      * Call the route handler with parameters.

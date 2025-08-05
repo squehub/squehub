@@ -8,7 +8,7 @@ use App\Components\ControlStructuresComponent;
 class View
 {
     // Array to hold multiple base directories to search views in
-    protected static $viewPaths = []; 
+    protected static $viewPaths = [];
 
     // Array to hold section contents during rendering
     protected static $sections = [];
@@ -153,14 +153,13 @@ class View
 
         extract($data);
 
-        ob_start();
-        require $viewFilePath;
-        $content = ob_get_clean();
-
-        $parsedContent = self::processBladeSyntax($content);
+        // Read the file directly, skip require/ob_start
+        $rawContent = file_get_contents($viewFilePath);
+        $parsedContent = self::processBladeSyntax($rawContent);
 
         self::executeParsedContent($parsedContent, $data, $view);
     }
+
 
     /**
      * Use a layout/view as parent to extend from
@@ -176,17 +175,17 @@ class View
 
         extract($data);
 
-        ob_start();
-        require $viewFilePath;
-        $content = ob_get_clean();
+        // Read the file directly, skip require/ob_start
+        $rawContent = file_get_contents($viewFilePath);
+        $parsedContent = self::processBladeSyntax($rawContent);
 
-        $parsedContent = self::processBladeSyntax($content);
-
-        // Set parent layout to be used by render
+        // Mark this as the layout to be rendered next
         self::$parentView = $view;
 
+        // Execute it (this will be captured in render after child is parsed)
         self::executeParsedContent($parsedContent, $data, $view);
     }
+
 
     /**
      * Start capturing a section block content
@@ -333,19 +332,41 @@ class View
         $content = preg_replace('/@enddo\s*\((.*?)\)/s', '<?php } while ($1); ?>', $content);
         $content = preg_replace('/@while\s*\((.*?)\)/s', '<?php while ($1): ?>', $content);
 
-        // @extends directive with optional variables (defaults to empty array, no get_defined_vars)
-        $content = preg_replace_callback('/@extends\(\s*[\'"]([a-zA-Z0-9._-]+)[\'"](?:\s*,\s*(\[.*?\]))?\s*\)/', function ($matches) {
+        // ✅ SQUEHUB FEATURE: AUTO VARIABLE PASSING ENABLED FOR @extends AND @include
+// ---------------------------------------------------------------------------
+// When @extends() or @include() is used WITHOUT a second argument,
+// SqueHub will automatically gather all defined view variables (e.g., $title, $user)
+// and pass them to the layout or partial.
+// It excludes internal framework vars like 'content', 'parsedContent', etc.
+// This makes views cleaner and reduces boilerplate.
+
+
+        // 🔁 Process all @extends('view.name', optional_variables) directives in the view content
+        $content = preg_replace_callback('/@extends\(\s*[\'"]([a-zA-Z0-9._-]+)[\'"](?:\s*,\s*(.*?))?\)/', function ($matches) {
             $view = $matches[1];
-            $vars = isset($matches[2]) ? $matches[2] : '[]';  
+
+            // 📦 If no custom data is passed, auto-pass all defined view variables
+            $vars = isset($matches[2]) && trim($matches[2]) !== ''
+                ? $matches[2]
+                : "array_diff_key(get_defined_vars(), array_flip(['parsedContent', 'content', 'data', 'view', '__data', 'cacheFile', 'viewFilePath']))"; // Auto-pass all view variables safely
+
+            // 🔧 Replace the directive with the actual PHP execution for View::extends()
             return "<?php \\App\\Core\\View::extends('$view', $vars); ?>";
         }, $content);
 
-        // @include directive with optional variables (defaults to empty array)
-        $content = preg_replace_callback('/@include\(\s*[\'"]([a-zA-Z0-9._-]+)[\'"](?:\s*,\s*(\[.*?\]))?\s*\)/', function ($matches) {
+        // 🔁 Process all @include('partial.name', optional_variables) directives in the view content
+        $content = preg_replace_callback('/@include\(\s*[\'"]([a-zA-Z0-9._-]+)[\'"](?:\s*,\s*(.*?))?\)/', function ($matches) {
             $view = $matches[1];
-            $vars = isset($matches[2]) ? $matches[2] : '[]';  
+
+            // 📦 If no custom data is passed, auto-pass all defined view variables
+            $vars = isset($matches[2]) && trim($matches[2]) !== ''
+                ? $matches[2]
+                : "array_diff_key(get_defined_vars(), array_flip(['parsedContent', 'content', 'data', 'view', '__data', 'cacheFile', 'viewFilePath']))"; // Auto-pass all view variables safely
+
+            // 🔧 Replace the directive with the PHP call to View::include()
             return "<?php \\App\\Core\\View::include('$view', $vars); ?>";
         }, $content);
+
 
         // Section start directive
         $content = preg_replace_callback('/@section\(\'([a-zA-Z0-9_-]+)\'\)/', function ($matches) {
