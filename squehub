@@ -1,2 +1,2 @@
 <?php
-require_once __DIR__ . '/app/clis/clis.php';
+require_once __DIR__ . '/app/Clis/clis.php';

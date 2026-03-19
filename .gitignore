@@ -2,8 +2,9 @@
 /vendor/
 
 # Environment files
-!.env         # ✅ Allow .env to be tracked
-!.env.example # ✅ Also allow .env.example
+.env              # ❌ Ignore real env
+.env.*            # ❌ Ignore variants like .env.local
+!.env.example     # ✅ Allow example file
 
 # CLI Welcome Message
 scripts/*

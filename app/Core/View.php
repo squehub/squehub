@@ -406,7 +406,6 @@ class View
 
         return $content;
     }
-
     /**
      * Get or create cache directory for compiled views
      * @return string Cache directory path
@@ -414,12 +413,43 @@ class View
     private static function getCacheDir(): string
     {
         $cacheDir = BASE_DIR . '/storage/cache/';
+
+        // Normalize path
+        $cacheDir = rtrim($cacheDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+        // If directory does not exist, try to create it
         if (!is_dir($cacheDir)) {
-            mkdir($cacheDir, 0755, true);
+
+            // Attempt to create directory
+            if (!@mkdir($cacheDir, 0775, true) && !is_dir($cacheDir)) {
+
+                // Try fallback permission
+                @mkdir($cacheDir, 0777, true);
+
+                // Still failed
+                if (!is_dir($cacheDir)) {
+                    throw new \Exception(
+                        "Failed to create cache directory at: {$cacheDir}. Check permissions."
+                    );
+                }
+            }
         }
+
+        // Ensure directory is writable
+        if (!is_writable($cacheDir)) {
+
+            // Attempt to fix permissions
+            @chmod($cacheDir, 0775);
+
+            if (!is_writable($cacheDir)) {
+                throw new \Exception(
+                    "Cache directory is not writable: {$cacheDir}"
+                );
+            }
+        }
+
         return $cacheDir;
     }
-
     /**
      * Generate cache filename based on view name and parsed content hash
      *
