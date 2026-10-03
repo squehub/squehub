@@ -1,5 +1,7 @@
 RewriteEngine On
+# Package assets require the Application's current activation decision even
+# when an ordinary public file happens to occupy the same URL.
+RewriteRule ^assets/Packages(?:/|$) index.php [QSA,L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [QSA,L]
-

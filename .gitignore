@@ -2,18 +2,20 @@
 /vendor/
 
 # Environment files
-.env              # ❌ Ignore real env
-.env.*            # ❌ Ignore variants like .env.local
-!.env.example     # ✅ Allow example file
-
-# CLI Welcome Message
-scripts/*
-!scripts/message
+.env
+.env.*
+!.example.env
 
 # IDE/editor settings
 .vscode/
 .idea/
 *.sublime-*
+
+# Local test overrides and generated documentation output
+/phpunit.xml
+/Docs/V2.x/PortalBuild/
+/Docs/V2.x/PortalSite/
+/Docs/V2.x/__pycache__/
 
 # Operating system files
 .DS_Store
@@ -22,19 +24,28 @@ Thumbs.db
 # Log files
 *.log
 logs/
-storage/logs/
+Storage/Logs/
 
 # Cache, sessions, and temporary data
 cache/
 tmp/
-storage/cache/
-storage/sessions/
-storage/views/
+Storage/Cache/
+Storage/Files/
+Storage/Backups/
+Storage/Sessions/
+Storage/Views/
+Storage/RateLimits/
+Storage/Queue/
+/.phpunit.cache/
+/.phpunit.result.cache
+/coverage/
+/project-backup/
 
 # CLI-generated files
 *.dump
 *.dmp
 *.lock
+!composer.lock
 clis/*.lock
 
 # Database dumps
@@ -48,4 +59,4 @@ clis/*.lock
 *.old
 
 # Ignore old backup config
-app/core/config.php.bak
+App/Core/Config.php.bak

@@ -1,34 +1,46 @@
 {
   "name": "squehub/squehub",
-  "version": "1.2.2",
-  "description": "A modern, lightweight PHP framework designed for building scalable and elegant web applications with simplicity and flexibility.",
+  "description": "The PHP framework for modern web builders.",
   "type": "project",
   "license": "MIT",
+  "homepage": "https://www.squehub.com/",
+  "support": {
+    "issues": "https://github.com/squehub/squehub/issues",
+    "source": "https://github.com/squehub/squehub"
+  },
   "authors": [
     {
       "name": "Valentine Kalu",
-      "email": "officialvalentinekalu@gmail.com",
-      "role": "Developer/Founder"
+      "role": "Creator and maintainer"
     }
   ],
   "minimum-stability": "stable",
   "autoload": {
     "psr-4": {
-      "App\\": "app/",
-      "Project\\": "project/",
-      "Packages\\": "project/packages/",
-      "Database\\Dumper\\": "database/dumper/"
-    }
+      "App\\": "App/",
+      "Project\\": "Project/",
+      "Database\\Seeders\\": "Database/Seeders/",
+      "Database\\Factories\\": "Database/Factories/",
+      "Project\\Packages\\": ["Project/Packages/", "project/Packages/", "project/packages/", "Project/packages/"],
+      "Packages\\": ["Project/Packages/", "project/Packages/", "project/packages/", "Project/packages/"]
+    },
+    "files": [
+      "App/Support/CaseFallbackAutoloader.php",
+      "App/Plugins/Request.php",
+      "App/Plugins/Response.php",
+      "App/Plugins/Schema.php",
+      "App/Plugins/Table.php"
+    ]
   },
   "extra": {
     "installer-paths": {
-      "project/packages/{$name}/": [
+      "Project/Packages/{$name}/": [
         "type:squehub-package"
       ]
     }
   },
   "require": {
-    "php": "^7.4 || ^8.0",
+    "php": "^8.2",
     "psr/container": "^1.1",
     "psr/log": "^1.1",
     "psr/http-message": "^1.0",
@@ -43,12 +55,13 @@
     "respect/validation": "^2.0",
     "symfony/security-core": "^6.0",
     "twig/twig": "^3.0",
-    "league/flysystem": "^2.0",
     "league/fractal": "^0.17",
     "jms/serializer": "^3.0",
     "symfony/event-dispatcher": "^6.0",
     "phpmailer/phpmailer": "^6.10",
-    "symfony/process": "^7.2"
+    "symfony/process": "^7.2",
+    "firebase/php-jwt": "^7.2",
+    "opis/json-schema": "^2.6"
   },
   "require-dev": {
     "phpunit/phpunit": "^9.5",
@@ -57,11 +70,24 @@
     "phpstan/phpstan": "^1.0",
     "squizlabs/php_codesniffer": "^3.6",
     "phan/phan": "^5.2",
-    "filp/whoops": "^2.18"
+    "filp/whoops": "^2.18",
+    "mcp/sdk": "0.8.1"
+  },
+  "suggest": {
+    "mcp/sdk": "Install the official PHP MCP SDK (0.8.1) when enabling the optional SqueHub Agent STDIO server.",
+    "aws/aws-sdk-php": "Required only for the optional S3-compatible Storage drive (^3.0).",
+    "ext-memcached": "Required only for the optional Memcached Cache drive.",
+    "ext-intl": "Required for ICU pluralization and locale-aware number, currency, and date/time formatting."
   },
   "scripts": {
+    "test": "@php vendor/bin/phpunit",
     "post-create-project-cmd": [
-      "@php scripts/message"
+      "@php Scripts/Message"
     ]
+  },
+  "config": {
+    "allow-plugins": {
+      "php-http/discovery": false
+    }
   }
 }

@@ -1,2 +1,29 @@
 <?php
-require_once __DIR__ . '/app/Clis/clis.php';
+// STDIO MCP reserves stdout for protocol frames. Capture any output emitted
+// while application configuration and CLI commands register; the MCP command
+// discards this bootstrap buffer just before its transport takes over.
+$squehubMcpBootstrapBufferLevel = null;
+$squehubCliArguments = array_slice($_SERVER['argv'] ?? [], 1);
+if (PHP_SAPI === 'cli' && in_array('agent:mcp', $squehubCliArguments, true)
+    && array_intersect(['--help', '-h', '--version', '-V'], $squehubCliArguments) === []
+    && !in_array($squehubCliArguments[0] ?? null, ['help', 'h'], true)) {
+    $squehubMcpBootstrapBufferLevel = ob_get_level();
+    ob_start();
+    register_shutdown_function(static function () use (&$squehubMcpBootstrapBufferLevel): void {
+        if ($squehubMcpBootstrapBufferLevel !== null) {
+            while (ob_get_level() > $squehubMcpBootstrapBufferLevel) {
+                ob_end_clean();
+            }
+        }
+    });
+}
+require_once __DIR__ . '/vendor/autoload.php';
+
+// Setup commands remain available while an incomplete installation is
+// reported on stderr, leaving structured command output on stdout intact.
+$setupNotice = \App\Foundation\EnvironmentSetup::notice(__DIR__);
+if ($setupNotice !== null) {
+    fwrite(STDERR, 'SqueHub setup: ' . $setupNotice . PHP_EOL);
+}
+
+require_once __DIR__ . '/App/Clis/Clis.php';

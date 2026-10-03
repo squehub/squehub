@@ -1,0 +1,5 @@
+parameters:
+    scanFiles:
+        - Tests/Static/AwsSdkPhpStan.stub
+    stubFiles:
+        - Tests/Static/AwsSdkPhpStan.stub

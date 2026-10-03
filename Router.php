@@ -1,49 +1,33 @@
 <?php
-// Router.php
 
-/**
- * Router class for managing application routes.
- */
+use App\Routing\RouteRegistry;
+use App\Packages\PackageManager;
+
+/** Legacy router for v1 route files and standalone dispatch. */
 class Router
 {
-    /**
-     * @var array $routes The collection of defined routes.
-     */
     private $routes = [];
 
-    /**
-     * @var array $namedRoutes The collection of named routes.
-     */
     private $namedRoutes = [];
 
-    /**
-     * @var callable|null $notFoundHandler Custom 404 handler.
-     */
     private $notFoundHandler = null;
 
-    /**
-     * @var array $middleware The collection of middleware handlers for routes.
-     */
     private $middleware = [];
 
-    /**
-     * @var array $attributes The current group attributes (prefix, middleware, etc.).
-     */
     private $attributes = [];
 
-    /**
-     * Add a new route to the router.
-     * Supports both callback and controller-based routes.
-     *
-     * @param string|array $methods The HTTP method(s) (e.g., 'GET', 'POST' or ['GET', 'POST']). 
-     * @param string $uri The URI path (e.g., '/about', '/contact').
-     * @param callable|string $handler A callback function or controller@method to handle the route.
-     * @param string|null $name An optional name for the route.
-     * @param array $middlewares Optional list of middleware for the route.
-     */
+    private bool $lastRouteMatched = false;
+
+    public function __construct(
+        private ?RouteRegistry $registry = null,
+        private ?PackageManager $packages = null
+    )
+    {
+    }
+
+    /** Register a v1 route and mirror it into the v2 registry when available. */
     public function add($methods, $uri, $handler, $name = null, $middlewares = [])
     {
-        // Apply group attributes (prefix, middleware) to the route
         if (isset($this->attributes['prefix'])) {
             $uri = $this->attributes['prefix'] . $uri;
         }
@@ -51,6 +35,9 @@ class Router
         if (isset($this->attributes['middleware'])) {
             $middlewares = array_merge($middlewares, $this->attributes['middleware']);
         }
+
+        // Standalone instances keep their own matching and dispatch behavior.
+        $this->registry?->addLegacy($methods, $uri, $handler, $name, $middlewares);
 
         if (is_array($methods)) {
             foreach ($methods as $method) {
@@ -65,41 +52,25 @@ class Router
         }
     }
 
-    /**
-     * Group routes with shared attributes (e.g., prefix, middleware).
-     *
-     * @param array $attributes The group attributes (e.g., 'prefix', 'middleware').
-     * @param callable $callback The function to define the routes within the group.
-     */
+    /** Apply shared legacy attributes while the callback registers routes. */
     public function group(array $attributes, callable $callback)
     {
-        // Store the current attributes to apply to all routes in the group
         $previousAttributes = $this->attributes;
         $this->attributes = array_merge($this->attributes, $attributes);
 
-        // Call the callback to define the routes
         $callback($this);
 
-        // Restore the previous attributes
         $this->attributes = $previousAttributes;
     }
 
-    /**
-     * Get the URL for a named route.
-     *
-     * @param string $name The name of the route.
-     * @param array $params Optional parameters for dynamic segments.
-     * @return string|null The generated URL or null if not found.
-     */
     public function route($name, $params = [])
     {
         if (!isset($this->namedRoutes[$name])) {
-            return '#'; // Fallback if the route is not found
+            return '#';
         }
 
         $url = $this->namedRoutes[$name];
 
-        // Replace any placeholders like {id}
         foreach ($params as $key => $value) {
             $url = str_replace("{" . $key . "}", $value, $url);
         }
@@ -107,127 +78,113 @@ class Router
         return $url;
     }
 
-    /**
-     * Set a custom handler for unmatched routes (404 handler).
-     *
-     * @param callable $callback The callback function for handling 404 responses.
-     */
     public function setNotFoundHandler($callback)
     {
         $this->notFoundHandler = $callback;
+        $this->registry?->setLegacyNotFoundHandler(is_callable($callback) ? $callback : null);
     }
 
-    /**
-     * Dispatch the incoming request to the correct route handler.
-     *
-     * @param string $method The HTTP method of the current request.
-     * @param string $uri The URI path of the current request.
-     */
-    public function dispatch($method, $uri)
+    /** Register a status page in the shared web kernel; 404 keeps its legacy API. */
+    public function setErrorHandler(int $status, callable $callback): void
+    {
+        if ($status < 400 || $status > 599) {
+            throw new InvalidArgumentException('Error handler status must be between 400 and 599.');
+        }
+        if ($status === 404) {
+            $this->setNotFoundHandler($callback);
+            return;
+        }
+        if ($this->registry === null) {
+            throw new LogicException('Error handlers other than 404 require the Application route registry.');
+        }
+        $this->registry->setErrorHandler($status, $callback);
+    }
+
+    public function dispatch($method, $uri, $emit = null)
     {
         $method = strtoupper($method);
         $normalizedUri = $this->normalizeUri($uri);
+        $this->lastRouteMatched = false;
 
         if (isset($this->routes[$method][$normalizedUri])) {
-            // Exact match route
             $route = $this->routes[$method][$normalizedUri];
-            $this->handleRouteWithMiddleware($route['handler'], $route['middlewares']);
+            $this->lastRouteMatched = true;
+            $this->handleRouteWithMiddleware($route['handler'], $route['middlewares'], [], $emit);
         } else {
-            // Try pattern match for dynamic routes
-            foreach ($this->routes[$method] as $pattern => $route) {
+            foreach ($this->routes[$method] ?? [] as $pattern => $route) {
                 $matches = [];
                 if (preg_match($this->convertToRegex($pattern), $normalizedUri, $matches)) {
-                    array_shift($matches); // Remove the full match part (first element)
-                    $this->handleRouteWithMiddleware($route['handler'], $route['middlewares'], $matches);
+                    array_shift($matches);
+                    $this->lastRouteMatched = true;
+                    $this->handleRouteWithMiddleware($route['handler'], $route['middlewares'], $matches, $emit);
                     return;
                 }
             }
 
-            // No route matched, invoke the 404 handler
             if (is_callable($this->notFoundHandler)) {
-                echo call_user_func($this->notFoundHandler);
+                $this->emit(call_user_func($this->notFoundHandler), $emit);
             } else {
-                include_once BASE_DIR . '/views/default/error/404.php';
+                include BASE_DIR . '/Project/Views/Default/Error/404.php';
             }
         }
     }
 
-    /**
-     * Handle route execution, including middleware.
-     *
-     * @param callable|string $handler The route handler (callback or controller).
-     * @param array $middlewares The middleware to be executed for the route.
-     * @param array $params The dynamic route parameters.
-     */
-    private function handleRouteWithMiddleware($handler, $middlewares, $params = [])
+    public function lastRouteMatched(): bool
     {
-        // Loop through each middleware and execute it
+        return $this->lastRouteMatched;
+    }
+
+    private function handleRouteWithMiddleware($handler, $middlewares, $params = [], $emit = null)
+    {
+        // Legacy middleware short-circuits on a truthy response; otherwise the handler runs once.
         foreach ($middlewares as $middleware) {
-            // Handle callable middlewares
             if (is_callable($middleware)) {
-                // Pass the request as a parameter along with the $next callback to continue execution
-                $response = call_user_func($middleware, $params, function () use ($handler, $params) {
-                    // Return the result after middleware (Don't call the handler yet)
+                $response = call_user_func($middleware, $params, function () {
                     return null;
                 });
 
-                // If middleware returns a response, stop further execution (e.g., redirect)
                 if ($response) {
-                    echo $response;
+                    $this->emit($response, $emit);
                     return;
                 }
             }
 
-            // Handle class-based middlewares (e.g., AuthMiddleware)
             elseif (class_exists($middleware)) {
                 $middlewareInstance = new $middleware();
 
-                // Call middleware handle method with a next callback
-                $response = $middlewareInstance->handle($params, function () use ($handler, $params) {
-                    // Middleware doesn't call the handler, just return null
+                $response = $middlewareInstance->handle($params, function () {
                     return null;
                 });
 
-                // If the middleware returns a response, stop execution (e.g., redirect)
                 if ($response) {
-                    echo $response;
+                    $this->emit($response, $emit);
                     return;
                 }
             }
         }
 
-        // After all middlewares pass, call the route handler once
-        echo $this->callHandlerWithParams($handler, $params);
+        $this->emit($this->callHandlerWithParams($handler, $params), $emit);
     }
 
-    /**
-     * Normalize the URI by removing trailing slashes and ensuring it starts with a single slash.
-     *
-     * @param string $uri The raw URI to normalize.
-     * @return string The normalized URI.
-     */
+    private function emit($value, $emit): void
+    {
+        if ($emit !== null) {
+            $emit($value);
+        } else {
+            echo $value;
+        }
+    }
+
     private function normalizeUri($uri)
     {
         return '/' . trim($uri, '/');
     }
 
-    /**
-     * Convert the route pattern to a regular expression.
-     *
-     * @param string $pattern The route pattern.
-     * @return string The regular expression.
-     */
     private function convertToRegex($pattern)
     {
         return '#^' . preg_replace('/{([a-zA-Z0-9_]+)}/', '([^/]+)', $pattern) . '$#';
     }
 
-    /**
-     * Call the route handler function (either callback or controller).
-     *
-     * @param callable|string $handler The route handler (callback or controller).
-     * @return mixed The response from the handler.
-     */
     private function callHandler($handler)
     {
         if (is_callable($handler)) {
@@ -239,40 +196,19 @@ class Router
         return 'Handler not valid.';
     }
 
-    /**
-     * Call the controller's method with parameters.
-     *
-     * @param string $controller The controller class.
-     * @param string $action The action method.
-     * @param array $params The parameters for the action.
-     * @return mixed The response from the controller's method.
-     */
     private function callControllerMethod($controller, $action, $params = [])
     {
         $controllerPath = str_replace(['/', '\\'], '\\', $controller);
 
-        // Default namespace
         $namespaces = [
             'Project\\Controllers\\' . $controllerPath,
         ];
 
-        // Use BASE_DIR constant for absolute path to Packages folder
-        $packageBaseDir = BASE_DIR . '/Project/Packages/';
-
-
-        if (is_dir($packageBaseDir)) {
-            foreach (scandir($packageBaseDir) as $packageName) {
-                if ($packageName === '.' || $packageName === '..') {
-                    continue;
-                }
-
-                $controllerClass = 'Project\\Packages\\' . $packageName . '\\Controllers\\' . $controllerPath;
-                $namespaces[] = $controllerClass;
-            }
-        } else {
-            echo "⚠️ Packages directory not found at: $packageBaseDir\n";
+        foreach ($this->packages?->active() ?? [] as $package) {
+            $packageName = $package->name();
+            $namespaces[] = 'Project\\Packages\\' . $packageName . '\\Controllers\\' . $controllerPath;
+            $namespaces[] = 'Packages\\' . $packageName . '\\Controllers\\' . $controllerPath;
         }
-
         foreach ($namespaces as $controllerClass) {
 
             if (class_exists($controllerClass)) {
@@ -288,13 +224,6 @@ class Router
         return "Controller '$controller' not found in any known namespaces.";
     }
 
-    /**
-     * Call the route handler with parameters.
-     *
-     * @param callable|string $handler The route handler (callback or controller).
-     * @param array $params The dynamic route parameters.
-     * @return mixed The response from the handler.
-     */
     private function callHandlerWithParams($handler, $params)
     {
         if (is_callable($handler)) {

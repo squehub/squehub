@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Show the next setup steps after Composer creates a SqueHub application.
+ * This script runs before .env exists, so it must not boot the application.
+ */
+fwrite(STDOUT, <<<'MESSAGE'
+
+SqueHub is installed.
+
+Next steps:
+  1. Copy .example.env to .env.
+  2. Run php squehub key:generate and set APP_KEY in .env.
+  3. Review your application and database settings.
+  4. Run php squehub doctor, then php squehub start.
+
+Run php squehub help to see the available commands.
+
+MESSAGE
+);
