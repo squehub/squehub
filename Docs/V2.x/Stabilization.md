@@ -51,7 +51,7 @@ The unused vulnerable `league/flysystem` 2.5.0 and its orphan `league/mime-type-
 
 Phase 26A–26E are complete in the recorded Windows/Linux, live MySQL, live PhpRedis, and no-dev profiles. The user removed the main and no-dev Linux qualification directories; no Phase 26 qualification directories remained. Isolated Apache, macOS, real cPanel, live Predis, Redis auth/TLS, and wider deployment proof remain open where indicated. Clean committed-checkout reproduction, published `composer create-project`, public v2 docs, and final tag/release approval remain separate Phase 27/28 gates.
 
-The v2 core is in development. This document separates a reproducible *working-tree source snapshot* from a Git checkout of current `HEAD`. The latter cannot reproduce v2 while required capitalized framework source, tests, configuration, and `composer.lock` remain untracked. Do not label or publish v2 as stable on the basis of a passing Windows working tree.
+The v2 core remains unreleased. This document's earlier Phase 8E/26 copy-based checks predate the local `release/v2.0.0` candidate, which now tracks source, tests, configuration, documentation, and `composer.lock` and has been cloned independently on Windows and native Linux. That progress does not substitute for the final exact-commit checks, public Composer installation, public documentation, and explicit release approval in [Release readiness](ReleaseReadiness.md).
 
 ## Clean-source check
 

@@ -1,11 +1,11 @@
 # SqueHub v2 pre-commit source manifest
 
-This inventory records the Phase 8E working tree. Review it again before a future commit. Nothing was staged by this audit. Its historical Dumper path mappings are superseded by Phase 13A's v2 retirement; do not treat them as a current source inclusion list. See [Seeders](Seeders.md).
+This inventory records the historical Phase 8E working tree. Nothing was staged by that audit. It is **not** the Phase 28 release manifest: the local `release/v2.0.0` candidate now tracks source, `Docs/`, `Tests/`, and the lock file in a cleanly cloned commit. Its historical Dumper path mappings are superseded by Phase 13A's v2 retirement. See [Seeders](Seeders.md) and [Release readiness](ReleaseReadiness.md).
 
 ## Include as source
 
-- Canonical App, Assets, Bootstrap, Config, Database, Project, and Scripts trees. `Docs/` and `Tests/` remain local and are ignored by Git.
-- Root entry points and compatibility bridges, public/index.php, squehub, composer.json, composer.lock, README.md, and .example.env. The local PHPUnit configuration remains with the ignored test suite.
+- Canonical App, Assets, Bootstrap, Config, Database, Project, and Scripts trees. At this Phase 8E checkpoint, `Docs/` and `Tests/` were local and ignored by Git; Phase 28 changed that policy.
+- Root entry points and compatibility bridges, public/index.php, squehub, composer.json, composer.lock, README.md, and .example.env. The PHPUnit configuration was local with the ignored test suite at that checkpoint; the release candidate tracks `phpunit.xml.dist`.
 - Capitalized files that replace old lowercase tracked paths, and intentional tracked deletions.
 
 ## Keep generated state out
@@ -15,7 +15,7 @@ This inventory records the Phase 8E working tree. Review it again before a futur
 
 ## Git index casing migrations
 
-The current Windows index has 45 remaining tracked spellings whose physical working-tree paths differ. A future commit must represent each rename once and must not include both spellings on a case-sensitive checkout. Four old starter application files were removed after this inventory was first written.
+At the Phase 8E checkpoint the Windows index had 45 tracked spellings whose physical working-tree paths differed. Phase 28 resolved casefold collisions before its local candidate commit and verified the checkout on a native case-sensitive Linux filesystem. Four old starter application files had been removed after this inventory was first written.
 
 - `app/Clis/Make/MakeController.php` → `App/Clis/Make/MakeController.php`
 - `app/Clis/Make/MakeDumper.php` → `App/Clis/Make/MakeDumper.php`

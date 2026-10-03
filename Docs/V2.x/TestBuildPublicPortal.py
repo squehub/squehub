@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from BuildPublicPortal import inline, safe_link
+from BuildPublicPortal import inline, render_markdown, safe_link
 
 
 class PublicStatusLinkTest(unittest.TestCase):
@@ -34,6 +34,26 @@ class PublicStatusLinkTest(unittest.TestCase):
             inline("Read [installation](Installation.md#requirements).", self.public_stems),
             'Read <a href="/docs/v2.x/installation#requirements">installation</a>.',
         )
+
+
+class TableRenderingTest(unittest.TestCase):
+    def test_wide_markdown_table_has_keyboard_scroll_region_and_semantic_table(self) -> None:
+        source = (
+            "# Reference\n\n"
+            "| Capability | Risk | Mode | Default | Supported? | Scope | Purpose |\n"
+            "| --- | --- | --- | --- | --- | --- | --- |\n"
+            "| `create_plan` | review | read | Denied | Yes | operations | Review only |\n\n"
+            "Next paragraph.\n"
+        )
+        fragment, _, _ = render_markdown(source, {})
+        self.assertIn(
+            '<div class="table-scroll" role="region" '
+            'aria-label="Scrollable documentation table" tabindex="0">'
+            '<table><thead><tr><th>Capability</th>', fragment,
+        )
+        self.assertIn('<td><code>create_plan</code></td>', fragment)
+        self.assertIn('</tbody></table></div>\n<p>Next paragraph.</p>', fragment)
+        self.assertEqual(fragment.count('<table>'), 1)
 
 
 if __name__ == "__main__":

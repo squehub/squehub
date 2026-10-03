@@ -2,7 +2,7 @@
 
 SqueHub records which application or enabled Package registered selected runtime behavior. Provenance helps answer where a route, middleware alias, view, configuration default, service binding, or Scheduler definition came from. It does not change registration, dispatch, view selection, or Package activation.
 
-This is development working-tree functionality, not a promise about the published SqueHub release. See [Packages](Packages.md) for installation, dependencies, and activation.
+See [Packages](Packages.md) for installation, dependencies, and activation.
 
 ## Owners and active registrations
 

@@ -31,7 +31,8 @@ use App\Dev\DevelopmentServer;
 use App\Dev\DevException;
 use App\Dev\DevSession;
 use App\Support\SecureRandom;
-$application = new Application('SqueHub', 'unreleased v2');
+use App\Foundation\FrameworkVersion;
+$application = new Application('SqueHub', FrameworkVersion::CURRENT);
 $application->add(new HelpCommand());
 $application->add(new SetupCommand(new \App\Setup\SetupManager(BASE_DIR), $squehubApp));
 

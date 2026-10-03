@@ -1,6 +1,6 @@
 # HTTP Responses
 
-SqueHub sends ordinary text, JSON, redirects, Views, bytes, local files, and produced chunks through the existing HTTP `Response` boundary. A controller returns a response; middleware may add headers or cookies; the web entry point sends it. These Phase 15C APIs are present in the v2.0.0 development working tree. Windows qualification passed 2,332 tests and 16,209 assertions with 62 skips; user-run Linux/WSL qualification passed 2,332 tests and 16,413 assertions with 17 skips. Neither result alone declares v2.0.0 release-ready.
+SqueHub sends ordinary text, JSON, redirects, Views, bytes, local files, and produced chunks through the existing HTTP `Response` boundary. A controller returns a response; middleware may add headers or cookies; the web entry point sends it. At the Phase 15C checkpoint, Windows qualification passed 2,332 tests and 16,209 assertions with 62 skips; user-run Linux/WSL qualification passed 2,332 tests and 16,413 assertions with 17 skips. Those results apply to that source revision and its tested environments.
 
 Application code can use the `App\Plugins` gateway and the global `response()` helper:
 

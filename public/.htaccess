@@ -1,7 +1,18 @@
 RewriteEngine On
+
+# A root-hosted checkout must not expose public/ as a second URL namespace.
+# THE_REQUEST stays on the original browser URL after an internal rewrite.
+RewriteCond %{THE_REQUEST} \s/+public(?:[/?]|\s) [NC]
+RewriteRule ^ - [F,L]
+
 # Package assets require the Application's current activation decision even
 # when an ordinary public file happens to occupy the same URL.
-RewriteRule ^assets/Packages(?:/|$) index.php [QSA,L]
+RewriteRule ^assets/Packages(?:/|$) index.php [QSA,L,NC]
+
+# Let the shared resolver prefer root Assets/ even when a duplicate file is
+# present in public/assets/. It validates casing, extensions and containment.
+RewriteRule ^assets(?:/|$) index.php [QSA,L,NC]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [QSA,L]

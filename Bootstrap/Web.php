@@ -9,6 +9,7 @@ use App\Http\JsonResponse;
 use App\Http\Kernel;
 use App\Http\Request;
 use App\Http\Response;
+use App\Http\StaticAssetResponder;
 use App\Foundation\EnvironmentSetup;
 use App\Foundation\UrlBasePath;
 use App\Routing\RoutePattern;
@@ -21,6 +22,24 @@ if (version_compare(PHP_VERSION, '8.2.0', '<')) {
 // Both public entry points share one request and response lifecycle.
 require_once dirname(__DIR__) . '/vendor/autoload.php';
 $request = Request::capture();
+$assetRoot = dirname(__DIR__);
+$assetMount = StaticAssetResponder::configuredMount($assetRoot);
+if ($assetMount !== null) {
+    try {
+        // Static files must work from either entry point before Session or
+        // legacy route bootstrap, including while the setup screen is active.
+        $asset = (new StaticAssetResponder($assetRoot))->response($request, $assetMount);
+        if ($asset !== null) {
+            $asset->send($request->method() === 'HEAD');
+            return;
+        }
+    } catch (Throwable) {
+        (new Response('Internal Server Error', 500,
+            ['Content-Type' => 'text/plain; charset=UTF-8']))
+            ->send($request->method() === 'HEAD');
+        return;
+    }
+}
 $setupNotice = EnvironmentSetup::notice(dirname(__DIR__));
 if ($setupNotice !== null) {
     // A fresh install should show one safe setup page before legacy bootstrap

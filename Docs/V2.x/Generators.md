@@ -1,6 +1,6 @@
 # Code generators
 
-SqueHub v2.0.0 provides five focused `make:*` commands for common application files. They create source files; they do not boot routes, execute application code, connect to the database, run migrations or Seeders, or install Packages. Run them from the application root with `php squehub`. The commands are available in this development working tree; v2.0.0 has not been published as a stable release. To plan several related files for one application capability, use the [SqueHub Feature Blueprint](FeatureBlueprints.md) command, `make:feature`.
+SqueHub v2.0.0 provides five focused `make:*` commands for common application files. They create source files; they do not boot routes, execute application code, connect to the database, run migrations or Seeders, or install Packages. Run them from the application root with `php squehub`. To plan several related files for one application capability, use the [SqueHub Feature Blueprint](FeatureBlueprints.md) command, `make:feature`.
 
 ```bash
 php squehub make:controller UserController

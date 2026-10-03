@@ -84,6 +84,14 @@ foreach (['/community', '/changelogs', '/contact'] as $path) {
     check($response->status() === 200 && str_contains($response->content(), 'ecosystem-page'),
         "$path did not render");
 }
+foreach (['/packages', '/kits', '/community', '/partners', '/changelogs', '/contact'] as $path) {
+    $page = requestPage($matcher, $registry, $path)->content();
+    check(str_contains($page, 'class="current-version-banner"')
+        && str_contains($page, '<strong>v2.0.0</strong>')
+        && str_contains($page, 'Current SqueHub version')
+        && !str_contains($page, 'In development'),
+        "$path has stale version copy");
+}
 $kitDocs = requestPage($matcher, $registry, '/kits/app-starter/docs')->content();
 check(str_contains($kitDocs, 'Proposed future workflow')
     && str_contains($kitDocs, 'kit:install squehub/app-starter')

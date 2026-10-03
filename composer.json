@@ -1,17 +1,29 @@
 {
   "name": "squehub/squehub",
   "description": "The PHP framework for modern web builders.",
+  "keywords": [
+    "php",
+    "framework",
+    "squehub",
+    "web",
+    "api",
+    "mvc",
+    "routing"
+  ],
   "type": "project",
   "license": "MIT",
   "homepage": "https://www.squehub.com/",
   "support": {
+    "docs": "https://www.squehub.com/docs/v2.x",
     "issues": "https://github.com/squehub/squehub/issues",
-    "source": "https://github.com/squehub/squehub"
+    "source": "https://github.com/squehub/squehub",
+    "email": "hello@squehub.com"
   },
   "authors": [
     {
       "name": "Valentine Kalu",
-      "role": "Creator and maintainer"
+      "email": "valentine.kalu@squehub.com",
+      "role": "Founder & Lead Maintainer"
     }
   ],
   "minimum-stability": "stable",
@@ -21,8 +33,18 @@
       "Project\\": "Project/",
       "Database\\Seeders\\": "Database/Seeders/",
       "Database\\Factories\\": "Database/Factories/",
-      "Project\\Packages\\": ["Project/Packages/", "project/Packages/", "project/packages/", "Project/packages/"],
-      "Packages\\": ["Project/Packages/", "project/Packages/", "project/packages/", "Project/packages/"]
+      "Project\\Packages\\": [
+        "Project/Packages/",
+        "project/Packages/",
+        "project/packages/",
+        "Project/packages/"
+      ],
+      "Packages\\": [
+        "Project/Packages/",
+        "project/Packages/",
+        "project/packages/",
+        "Project/packages/"
+      ]
     },
     "files": [
       "App/Support/CaseFallbackAutoloader.php",
@@ -31,13 +53,6 @@
       "App/Plugins/Schema.php",
       "App/Plugins/Table.php"
     ]
-  },
-  "extra": {
-    "installer-paths": {
-      "Project/Packages/{$name}/": [
-        "type:squehub-package"
-      ]
-    }
   },
   "require": {
     "php": "^8.2",
@@ -86,6 +101,7 @@
     ]
   },
   "config": {
+    "process-timeout": 1200,
     "allow-plugins": {
       "php-http/discovery": false
     }

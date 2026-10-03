@@ -260,6 +260,8 @@ Optional [Typed application data](ApplicationData.md) exposes exact `DataMapper`
 
 The optional [Agent and AI integration](AgentAndAI.md) is an explicit local CLI/MCP inspection tool rather than an ordinary application-facing service. Its `App\Agent` manager and capability types remain in their canonical namespace; Phase 25 does not add an `App\Plugins\Agent` static facade or make application HTTP code depend on the MCP SDK. Existing public Plugins symbols are included only as bounded metadata in Agent context.
 
+The `squehub://framework` `public_api.symbols` list is built from canonical PHP filenames directly under the framework's `App/Plugins/` directory, with a 256-file bound. It is an inventory of filesystem-declared symbol names, not an autoload, availability proof for every extension, or a call through those Plugins gateways. The same resource includes the registered CLI inventory when the console supplies it. See [MCP tools and resources](AgentMcpTools.md).
+
 Phase 25A–25F passed Windows and user-run native Linux verification, including official MCP SDK client interoperability on Linux. The Agent integration continues to expose no new Plugins gateway; see [release readiness](ReleaseReadiness.md#phase-25-agent-and-ai-integration--complete).
 
 Scheduler definition files may live in `Project/Scheduler/`, the legacy application-owned `Project/<Name>/Scheduler/` layout, or an enabled Package's `Project/Packages/<PackageName>/Scheduler/`. They are loaded only by `schedule:list` and `schedule:run`. Definition files use `.php`. See [Scheduler](Scheduler.md) for registration and execution rules.

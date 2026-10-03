@@ -4,7 +4,7 @@
 
 SqueHub brings routing, Views, data, security, background work, and developer tools into one PHP application framework. Your application lives in `Project/`; framework internals live in `App/`.
 
-> **Current source: v2.0.0 release-candidate preparation, not yet published.** The [public repository](https://github.com/squehub/squehub) and `composer create-project squehub/squehub` currently resolve to the published v1 generation. Use a complete v2 source snapshot for the steps below until the v2 release artifact and Composer installation are verified.
+This README describes SqueHub v2.0.0. Select a versioned v2 release when installing from Composer or GitHub; an unversioned install may select a different generation.
 
 ## Build with SqueHub
 
@@ -14,7 +14,7 @@ SqueHub brings routing, Views, data, security, background work, and developer to
 - Defer work through Queue and Scheduler; use Mail, Notifications, Storage, Cache, and Events as needed.
 - Organize applications with Packages and Kits. Optional frontend profiles support Vite, React, and Vue; PHP Views require no Node.js build.
 
-The [v2 documentation](Docs/V2.x/README.md) describes the public APIs and feature-specific limits.
+The [official v2 documentation](https://www.squehub.com/docs/v2.x) describes the public APIs, examples, and feature-specific limits.
 
 ## Requirements
 
@@ -22,9 +22,16 @@ The [v2 documentation](Docs/V2.x/README.md) describes the public APIs and featur
 - A PDO driver for the database you choose, such as `pdo_sqlite` or `pdo_mysql`.
 - The extensions and external services required by the features you enable. Run `php squehub doctor` after configuration.
 
-## Install from the v2 source
+## Installation
 
-From a **complete v2 source snapshot**:
+For a published v2 release on Packagist, create a project with a version constraint:
+
+```bash
+composer create-project squehub/squehub my-app "^2.0"
+cd my-app
+```
+
+To work from a complete v2 source checkout instead, run:
 
 ```bash
 composer install
@@ -55,7 +62,7 @@ php squehub doctor
 php squehub start
 ```
 
-The server prints its local URL. For Apache or Nginx, use `public/` as the document root. See the [installation guide](Docs/V2.x/Installation.md) for setup options and service requirements.
+The server prints its local URL. For Apache or Nginx, use `public/` as the document root. See the [official installation guide](https://www.squehub.com/docs/v2.x/installation) for setup options and service requirements.
 
 ## Your first route
 
@@ -69,7 +76,7 @@ use App\Plugins\Route;
 Route::path('/hello')->get(static fn (): string => 'Hello, SqueHub!');
 ```
 
-Run `php squehub route:list`, then visit `/hello` on the local server. The starter homepage is in `Project/Views/Home/Welcome.squehub.php`, with its stylesheet in `public/assets/css/welcome.css`. Continue with the [first application guide](Docs/V2.x/FirstApplication.md).
+Run `php squehub route:list`, then visit `/hello` on the local server. The starter homepage is in `Project/Views/Home/Welcome.squehub.php`, with its stylesheet in `public/assets/css/welcome.css`. Continue with the [first application guide](https://www.squehub.com/docs/v2.x/first-application).
 
 ## Project layout
 
@@ -80,7 +87,6 @@ Database/     Migrations, Seeders, and Factories
 Project/      Application routes, controllers, models, Views, Packages, and Kits
 public/       Web document root and public assets
 Storage/      Private runtime data
-Tests/        Framework test suite
 squehub       CLI entry point
 ```
 
@@ -88,11 +94,11 @@ Run `php squehub help` for the available commands. Database-changing commands sh
 
 ## Documentation and testing
 
-- [v2 documentation](Docs/V2.x/README.md) for this source snapshot.
-- [Upgrade from v1.x](Docs/V2.x/UpgradeFromV1.md) for migration decisions and breaking changes.
-- [Published v1.x documentation](https://www.squehub.com/docs/v1.x) for the currently released generation.
+- [v2 documentation](https://www.squehub.com/docs/v2.x) for current APIs and guides.
+- [Upgrade from v1.x](https://www.squehub.com/docs/v2.x/upgrade-from-v1) for migration decisions and breaking changes.
+- [v1.x documentation](https://www.squehub.com/docs/v1.x) for historical applications.
 
-From the complete development source, run:
+From a complete source checkout, run:
 
 ```bash
 composer validate --strict

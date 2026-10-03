@@ -46,8 +46,7 @@ final class AgentManager
             if ($row['name'] === 'create_plan') $plan = $row['allowed'];
         }
         return AgentOutput::safe([
-            'framework' => ['name' => 'SqueHub', 'version' => AgentContext::VERSION,
-                'release' => 'unreleased'],
+            'framework' => ['name' => 'SqueHub', 'version' => AgentContext::VERSION],
             'protocol' => ['transport' => 'stdio',
                 'supported_stdio' => AgentContext::STDIO_PROTOCOL],
             'mode' => $plan ? 'inspection-and-proposal' : 'read-only',

@@ -1,6 +1,6 @@
 # Build a small application
 
-This walkthrough uses the current path-first routing API and `App\Plugins` imports. It assumes [Installation](Installation.md) is complete. Application PHP files belong under `Project/`; there is no requirement to edit framework classes.
+This walkthrough uses the current path-first routing API and `App\Plugins` imports. It assumes [Installation](Installation.md) is complete and the local server is running. Application PHP files belong under `Project/`; there is no requirement to edit framework classes. Steps 1–3 build a working route, page, and validation form. The database step is optional.
 
 ## 1. Add a route without a controller
 
@@ -44,7 +44,7 @@ Create `Project/Views/Welcome/Show.squehub.php`:
 <h1>Welcome, {{ $name }}</h1>
 ```
 
-Register it in `Project/Routes/Web.php`:
+Replace the `/welcome` closure in `Project/Routes/Web.php` with the controller route (keep the existing `use App\Plugins\Route;` import):
 
 ```php
 use Project\Controllers\WelcomeController;
@@ -52,46 +52,88 @@ use Project\Controllers\WelcomeController;
 Route::path('/welcome')->get([WelcomeController::class, 'show'])->named('welcome');
 ```
 
-Replace the earlier `/welcome` closure rather than registering the same method and path twice. Controllers are ordinary PHP classes resolved through the container. `View::render()` writes output, and the HTTP dispatcher captures it. `{{ }}` escapes HTML. See [Routing](Routing.md), [HTTP](Http.md), and [Views](Views.md).
+Controllers are ordinary PHP classes resolved through the container. `View::render()` writes output, and the HTTP dispatcher captures it. `{{ }}` escapes HTML. Refresh `/welcome` to see the template. See [Routing](Routing.md), [HTTP](Http.md), and [Views](Views.md).
 
 ## 3. Add a form with validation
 
-In a `.squehub.php` template:
+Create `Project/Views/Contact/Create.squehub.php`:
 
 ```html
-<form method="POST" action="/contact">
+<h1>Contact</h1>
+<form method="POST" action="{{ route('contact.store') }}">
     @csrf
     <label for="email">Email</label>
-    <input id="email" name="email" value="{{ old('email', '') }}">
-    @php $emailError = $errors->first('email'); @endphp
-    @if ($emailError)
-        <p>{{ $emailError }}</p>
-    @endif
-    <button type="submit">Send</button>
+    <input id="email" name="email" type="email" value="{{ old('email', '') }}"
+           aria-invalid="{{ $errors->has('email') ? 'true' : 'false' }}">
+    @error('email')
+        <p id="email-error" role="alert">{{ $message }}</p>
+    @enderror
+    <button type="submit">Continue</button>
 </form>
 ```
 
-In a controller method:
+Create `Project/Controllers/ContactController.php`:
 
 ```php
+<?php
+
+namespace Project\Controllers;
+
 use App\Plugins\Request;
+use App\Plugins\Response;
+use App\Plugins\View;
 
-public function submit(Request $request): \App\Plugins\Response
+final class ContactController
 {
-    $data = $request->validate([
-        'email' => 'required|email',
-    ]);
+    public function create(): void
+    {
+        View::render('Contact.Create');
+    }
 
-    // Handle the validated address with an application service.
-    return response()->redirect('/welcome');
+    public function store(Request $request): Response
+    {
+        $data = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        // Pass $data['email'] to your application service when adding delivery.
+        return response()->redirect(route('welcome'), 303);
+    }
 }
 ```
 
-Register `Route::path('/contact')->post([ContactController::class, 'submit']);`. CSRF runs before route middleware and controller code. For browser validation failures, SqueHub can redirect back to a safe internal page and flash `$errors` and `old()` input. JSON requests receive structured 422 errors. See [Forms](Forms.md), [Validation](Validation.md), and [CSRF](Csrf.md).
+Add both routes to `Project/Routes/Web.php` and import `ContactController` at the top:
+
+```php
+use Project\Controllers\ContactController;
+
+Route::path('/contact')->get([ContactController::class, 'create'])->named('contact.create');
+Route::path('/contact')->post([ContactController::class, 'store'])->named('contact.store');
+```
+
+Visit `/contact`, submit a valid address, and expect a 303 redirect to `/welcome`. The example validates input but does not store or send it; add that operation at the marked application-service line before using the form for real contact requests. Submit an empty field to see the server-side error after SqueHub redirects back to the safe GET page. The named form action and redirect also work under `APP_BASE_PATH`. CSRF runs before route middleware and controller code; a missing token returns 403. JSON requests receive structured 422 validation errors. See [Forms](Forms.md), [Validation](Validation.md), and [CSRF](Csrf.md).
 
 ## 4. Add database state when needed
 
-Configure a disposable or intended database in `.env`; then write a migration in `Database/Migrations/`, run `php squehub migrate`, and create an application model in `Project/Models/`. The [Migrations](Migrations.md) guide has the exact class naming and command contract. Modern Models extend `App\Plugins\Model`:
+Configure a disposable or intended database in `.env` and check it with `php squehub doctor`. Generate a migration, then add the `title` column to its generated `up()` method:
+
+```bash
+php squehub make:migration create_notes_table
+```
+
+The generator creates a dated file under `Database/Migrations/` with a `CreateNotesTable` class, an `id` column, and a matching rollback. The resulting `up()` method should contain:
+
+```php
+public function up(PDO $pdo, Schema $schema): void
+{
+    $schema->create('notes', static function (Table $table): void {
+        $table->id();
+        $table->string('title', 190);
+    });
+}
+```
+
+Keep the generated imports for `PDO`, `Schema`, and `Table` and its `down()` method. Review the other pending migrations in this source before running `php squehub migrate`, which applies all pending files against the selected database. Then create `Project/Models/Note.php`. Modern Models extend `App\Plugins\Model`:
 
 ```php
 <?php

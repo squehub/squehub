@@ -15,7 +15,7 @@ from pathlib import Path
 import re
 import struct
 from urllib.error import HTTPError
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
 
@@ -44,8 +44,141 @@ class ArticleParser(HTMLParser):
                     self.problems.append('unsafe href scheme')
 
 
+class VisibleTextParser(HTMLParser):
+    """Read page text without treating URL paths or HTML attributes as copy."""
+
+    ignored_tags = {'script', 'style', 'svg', 'template'}
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.ignored_depth = 0
+        self.parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in self.ignored_tags:
+            self.ignored_depth += 1
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in self.ignored_tags and self.ignored_depth:
+            self.ignored_depth -= 1
+
+    def handle_data(self, data: str) -> None:
+        if not self.ignored_depth:
+            self.parts.append(data)
+
+
+def has_visible_v2(source: str) -> bool:
+    parser = VisibleTextParser()
+    parser.feed(source)
+    return re.search(r'\bv2\b', ' '.join(parser.parts), re.IGNORECASE) is not None
+
+
+MAX_STATIC_ASSETS = 64
+MAX_STATIC_ASSET_BYTES = 2 * 1024 * 1024
+
+
+def local_asset_path(value: str) -> str | None:
+    """Map only SqueHub static URLs to a path on the selected local origin."""
+    try:
+        parsed = urlsplit(value)
+    except ValueError:
+        return None
+    if parsed.scheme and parsed.scheme not in {'http', 'https'}:
+        return None
+    if parsed.netloc and parsed.netloc.lower() not in {'squehub.com', 'www.squehub.com'}:
+        return None
+    path = parsed.path
+    if not (path.startswith('/assets/docs/')
+            or path == '/assets/images/og/squehub.png'):
+        return None
+    if not re.fullmatch(r'/[A-Za-z0-9_./-]+', path) or '..' in path.split('/'):
+        return None
+    return path + (f'?{parsed.query}' if parsed.query else '')
+
+
+class AssetReferences(HTMLParser):
+    """Collect only static assets referenced by rendered public HTML."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.paths: set[str] = set()
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = dict(attrs)
+        candidates = [values.get('href'), values.get('src')]
+        if tag == 'meta' and (values.get('property') == 'og:image'
+                              or values.get('name') == 'twitter:image'):
+            candidates.append(values.get('content'))
+        if values.get('srcset'):
+            candidates.extend(part.strip().split(' ', 1)[0]
+                              for part in values['srcset'].split(','))
+        for value in candidates:
+            path = local_asset_path(value) if value else None
+            if path:
+                self.paths.add(path)
+
+
+def referenced_assets(html: str) -> set[str]:
+    parser = AssetReferences()
+    parser.feed(html)
+    return parser.paths
+
+
+def stylesheet_assets(path: str, body: bytes) -> set[str]:
+    """Follow same-origin CSS url() references, including imported stylesheets."""
+    source = body.decode('utf-8', 'replace')
+    found: set[str] = set()
+    for match in re.finditer(r'url\(\s*[\'\"]?([^\'\")]+)', source):
+        target = local_asset_path(urljoin(path, match.group(1).strip()))
+        if target:
+            found.add(target)
+    return found
+
+
+def header_value(headers: dict[str, str], name: str) -> str | None:
+    """HTTP field names are case-insensitive, including on LiteSpeed responses."""
+    return next((value for field, value in headers.items()
+                 if field.lower() == name.lower()), None)
+
+
+def static_asset_issue(path: str, status: int, headers: dict[str, str],
+                       body: bytes) -> str | None:
+    """Reject error-page fallbacks, wrong media types, and invalid asset bytes."""
+    if status != 200:
+        return f'{path}: static asset returned {status}'
+    if len(body) > MAX_STATIC_ASSET_BYTES:
+        return f'{path}: static asset exceeds {MAX_STATIC_ASSET_BYTES} bytes'
+    content_type = (header_value(headers, 'Content-Type') or '').split(';', 1)[0].strip().lower()
+    suffix = urlsplit(path).path.rsplit('.', 1)[-1].lower()
+    expected = {
+        'css': {'text/css'},
+        'js': {'text/javascript', 'application/javascript'},
+        'png': {'image/png'},
+        'svg': {'image/svg+xml'},
+    }.get(suffix)
+    if expected is None:
+        return f'{path}: unsupported public static asset type'
+    if content_type not in expected:
+        return f'{path}: static asset has unexpected Content-Type {content_type!r}'
+    if not body.strip():
+        return f'{path}: static asset is empty'
+    if suffix == 'png':
+        if (len(body) < 24 or body[:8] != b'\x89PNG\r\n\x1a\n'
+                or body[12:16] != b'IHDR'):
+            return f'{path}: static asset is not a PNG'
+        if urlsplit(path).path == '/assets/images/og/squehub.png' \
+                and struct.unpack('>II', body[16:24]) != (1200, 630):
+            return f'{path}: social image is not 1200 × 630'
+    elif suffix == 'svg':
+        if b'<svg' not in body[:4096].lower() or b'<html' in body[:4096].lower():
+            return f'{path}: static asset is not SVG content'
+    elif b'<html' in body[:4096].lower() or b'<!doctype html' in body[:4096].lower():
+        return f'{path}: static asset contains an HTML page'
+    return None
+
+
 class NoRedirect(HTTPRedirectHandler):
-    """Expose the actual /docs status instead of following its redirect."""
+    """Expose route and asset redirects instead of following them."""
 
     def redirect_request(self, request, fp, code, message, headers, newurl):
         return None
@@ -60,6 +193,40 @@ def response(base: str, path: str) -> tuple[int, dict[str, str], str]:
         return error.code, dict(error.headers), error.read().decode('utf-8', 'replace')
 
 
+def static_response(base: str, path: str) -> tuple[int, dict[str, str], bytes]:
+    if not path.startswith('/') or local_asset_path(path) != path:
+        raise ValueError('Static asset request must use a local asset path')
+    request = Request(base.rstrip('/') + path, headers={'Accept': '*/*'})
+    opener = build_opener(NoRedirect)
+    try:
+        with opener.open(request, timeout=5) as opened:
+            return opened.status, dict(opened.headers), opened.read(MAX_STATIC_ASSET_BYTES + 1)
+    except HTTPError as error:
+        return error.code, dict(error.headers), error.read(MAX_STATIC_ASSET_BYTES + 1)
+
+
+def verify_static_assets(base: str, references: set[str]) -> list[str]:
+    issues: list[str] = []
+    pending = set(references)
+    checked: set[str] = set()
+    while pending:
+        if len(checked) >= MAX_STATIC_ASSETS:
+            issues.append(f'public pages reference more than {MAX_STATIC_ASSETS} static assets')
+            break
+        path = min(pending)
+        pending.remove(path)
+        if path in checked:
+            continue
+        checked.add(path)
+        status, headers, body = static_response(base, path)
+        problem = static_asset_issue(path, status, headers, body)
+        if problem:
+            issues.append(problem)
+        elif urlsplit(path).path.endswith('.css'):
+            pending.update(stylesheet_assets(path, body) - checked)
+    return issues
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--catalog', type=Path, required=True)
@@ -67,12 +234,16 @@ def main() -> None:
     parser.add_argument('--base-url', help='Local HTTP origin such as http://localhost')
     args = parser.parse_args()
     manifest = json.loads((args.catalog / 'manifest.json').read_text(encoding='utf-8'))
+    issues: list[str] = []
+    expected_labels = {'v1.x': 'v1.x — Legacy', 'v2.x': 'v2.x — Current'}
+    for version, label in expected_labels.items():
+        if manifest['versions'].get(version, {}).get('label') != label:
+            issues.append(f'{version}: incorrect version selector label')
     pages = {
         (version, page['slug']): page
         for version, record in manifest['versions'].items()
         for page in record['pages']
     }
-    issues: list[str] = []
     parsed: dict[tuple[str, str], ArticleParser] = {}
     for key, page in pages.items():
         document = ArticleParser()
@@ -85,13 +256,23 @@ def main() -> None:
     status_link = '/docs/v2.x/status'
     if ('v2.x', 'status') not in pages:
         issues.append('missing public v2 status guide')
-    for slug in ('agent-and-ai', 'api-verification', 'setup'):
+    home = pages.get(('v2.x', 'index'))
+    if home is None:
+        issues.append('missing curated v2 home')
+    else:
+        home_html = (args.catalog / home['fragment']).read_text(encoding='utf-8')
+        if 'Select and verify an exact v2 source ref or Composer version.' not in home_html \
+                or 'not yet a published' in home_html:
+            issues.append('curated v2 home has stale installation guidance')
+    for slug in ('agent-and-ai', 'agent-mcp-setup', 'agent-mcp-tools',
+                 'api-verification', 'setup'):
         document = parsed.get(('v2.x', slug))
         if document is None or status_link not in document.links:
             issues.append(f'{slug}: missing link to public v2 status')
     v2_index = parsed.get(('v2.x', 'index'))
     for path in ('/docs/v2.x/first-application', '/docs/v2.x/api-development',
-                 '/docs/v2.x/agent-and-ai', status_link):
+                 '/docs/v2.x/agent-and-ai', '/docs/v2.x/agent-mcp-setup',
+                 '/docs/v2.x/agent-mcp-tools', status_link):
         if v2_index is None or path not in v2_index.links:
             issues.append(f'v2 curated home lacks learning path {path}')
 
@@ -141,6 +322,7 @@ def main() -> None:
              Path(__file__).parent / 'PortalAssets/landing-platform.css'),
             ('css/landing-studio.css',
              Path(__file__).parent / 'PortalAssets/landing-studio.css'),
+            ('js/docs.js', Path(__file__).parent / 'PortalAssets/docs.js'),
             ('js/landing.js', Path(__file__).parent / 'PortalAssets/landing.js'),
             ('images/partners/cybqu.svg',
              Path(__file__).parent / 'PortalAssets/Images/partners/cybqu.svg'),
@@ -151,7 +333,7 @@ def main() -> None:
         landing_path = args.site_root / 'Project/Views/Docs/Landing.squehub.php'
         if landing_path.is_file():
             landing = landing_path.read_text(encoding='utf-8')
-            if landing.count('<h1 ') != 1 or 'From first route to' not in landing:
+            if landing.count('<h1 ') != 1 or '<h1 id="sq-hero-title">SqueHub — <span>The PHP Framework for Modern Web Builders</span></h1>' not in landing:
                 issues.append('landing must have one current hero headline')
             if 'class="sq-hero-art" aria-hidden="true"' not in landing \
                     or not all(f'>{name}</span>' in landing for name in
@@ -160,8 +342,14 @@ def main() -> None:
             if 'class="sq-agent-section"' not in landing \
                     or 'class="sq-agent-scene"' not in landing \
                     or 'href="/docs/v2.x/agent-and-ai"' not in landing \
-                    or 'Optional in the v2 development source' not in landing:
-                issues.append('landing Agent section is missing its local-development scope')
+                    or 'href="/docs/v2.x/agent-mcp-setup"' not in landing \
+                    or 'Optional local MCP integration' not in landing:
+                issues.append('landing Agent section is missing its optional local scope')
+            if ('src="/assets/docs/js/docs.js?v=20261003e"' not in landing
+                    or 'src="/assets/docs/js/search-index.js?v=20261003e"' not in landing):
+                issues.append('landing search asset cache version is stale')
+            if has_visible_v2(landing):
+                issues.append('landing contains visible v2 text')
             if 'class="sq-platform-section"' not in landing \
                     or landing.count('class="sq-platform-pane ') != 3 \
                     or 'href="/docs/v2.x/frontend-profiles"' not in landing \
@@ -251,6 +439,13 @@ def main() -> None:
                 if not any('identityprovider' in item['content']
                            for item in index if item['version'] == 'v2.x'):
                     issues.append('late-article search terms were truncated')
+                for slug, term in (('agent-mcp-setup', 'codex'),
+                                   ('agent-mcp-tools', 'create_plan'),
+                                   ('agent-mcp-tools', 'changeplan')):
+                    if not any(item['version'] == 'v2.x'
+                               and item['url'] == f'docs/v2.x/{slug}'
+                               and term in item['content'] for item in index):
+                        issues.append(f'{slug}: missing from searchable public guides')
                 for item in index:
                     parts = item['url'].split('/')
                     if len(parts) not in (2, 3) or parts[:2] != ['docs', item['version']]:
@@ -263,6 +458,10 @@ def main() -> None:
     http_pages = 0
     if args.base_url:
         base = args.base_url.rstrip('/')
+        asset_paths: set[str] = {
+            '/assets/docs/images/squehub-icon.png',
+            '/assets/images/og/squehub.png',
+        }
         redirect_request = Request(base + '/docs')
         try:
             with build_opener(NoRedirect).open(redirect_request, timeout=10) as opened:
@@ -278,8 +477,12 @@ def main() -> None:
                 path = f'/docs/{version}' + (f'/{slug}' if slug else '')
                 status, headers, body = response(base, path)
                 http_pages += 1
+                asset_paths.update(referenced_assets(body))
                 if status != 200 or '<title>' not in body or 'rel="canonical"' not in body:
                     issues.append(f'{path} status/metadata invalid: {status}')
+                if ('src="/assets/docs/js/docs.js?v=20261003e"' not in body
+                        or 'src="/assets/docs/js/search-index.js?v=20261003e"' not in body):
+                    issues.append(f'{path}: search asset cache version is stale')
                 expected_title = (f'{pages[(version, slug)]["title"]} — SqueHub '
                                   f'{"v2.0.0" if version == "v2.x" else "v1.x"} Documentation') \
                     if slug else ('SqueHub v2.0.0 Documentation' if version == 'v2.x'
@@ -290,23 +493,33 @@ def main() -> None:
                 if 'property="og:image" content="https://www.squehub.com/assets/images/og/squehub.png"' not in body \
                         or 'name="twitter:image" content="https://www.squehub.com/assets/images/og/squehub.png"' not in body:
                     issues.append(f'{path}: social preview image metadata is missing')
-                if 'class="current-version-banner"' not in body \
-                        or '<strong>v2.0.0</strong>' not in body \
-                        or 'In development' not in body:
-                    issues.append(f'{path} lacks the current development version')
-                if headers.get('X-Content-Type-Options') != 'nosniff':
+                # Article copy may legitimately describe a development environment.
+                banner = re.search(
+                    r'<div class="current-version-banner"[^>]*>(.*?)</div>',
+                    body, re.DOTALL,
+                )
+                if banner is None \
+                        or '<strong>v2.0.0</strong>' not in banner.group(1) \
+                        or 'Current SqueHub version' not in banner.group(1) \
+                        or 'In development' in banner.group(1):
+                    issues.append(f'{path} has stale version copy')
+                if header_value(headers, 'X-Content-Type-Options') != 'nosniff':
                     issues.append(f'{path} lacks nosniff')
                 if version == 'v2.x' and not slug:
-                    for guide in ('/docs/v2.x/agent-and-ai', status_link):
+                    for guide in ('/docs/v2.x/agent-and-ai',
+                                  '/docs/v2.x/agent-mcp-setup',
+                                  '/docs/v2.x/agent-mcp-tools', status_link):
                         if f'href="{guide}"' not in body:
                             issues.append(f'{path} lacks learning path {guide}')
         for path in ('/docs/v1.x/no-such-page', '/docs/v2.x/no-such-page'):
             status, headers, body = response(base, path)
+            asset_paths.update(referenced_assets(body))
             if status != 404 or 'class="docs-not-found"' not in body \
                     or 'content="noindex,follow"' not in body \
-                    or headers.get('Cache-Control') != 'no-store':
+                    or header_value(headers, 'Cache-Control') != 'no-store':
                 issues.append(f'{path}: docs 404 status, design, or cache policy invalid')
         status, _, body = response(base, '/__squehub_missing_page__')
+        asset_paths.update(referenced_assets(body))
         if status != 404 or 'class="error-page"' not in body \
                 or '/assets/docs/css/error.css' not in body \
                 or 'content="noindex,follow"' not in body:
@@ -317,19 +530,21 @@ def main() -> None:
             if status != expected:
                 issues.append(f'{path}: expected {expected}, received {status}')
         home_status, _, home_body = response(base, '/')
-        if home_status != 200 or 'From first route to' not in home_body \
+        asset_paths.update(referenced_assets(home_body))
+        if home_status != 200 or '<h1 id="sq-hero-title">SqueHub — <span>The PHP Framework for Modern Web Builders</span></h1>' not in home_body \
                 or '/docs/v2.x/installation' not in home_body \
                 or 'class="sq-hero-art" aria-hidden="true"' not in home_body \
                 or 'class="sq-agent-scene"' not in home_body \
+                or 'href="/docs/v2.x/agent-mcp-setup"' not in home_body \
                 or 'class="sq-platform-section"' not in home_body \
                 or 'class="sq-studio-section"' not in home_body \
                 or 'href="/docs/v2.x/studio"' not in home_body \
                 or '/assets/docs/css/landing-studio.css' not in home_body \
                 or '/assets/docs/images/partners/cybqu.svg' not in home_body \
-                or 'href="/partners"' not in home_body \
-                or 'class="current-version-banner"' not in home_body \
-                or '<strong>v2.0.0</strong>' not in home_body:
+                or 'href="/partners"' not in home_body:
             issues.append(f'Site home does not show the current docs landing: {home_status}')
+        if has_visible_v2(home_body):
+            issues.append('Site home contains visible v2 text')
         for metadata in (
             '<title>SqueHub — The PHP Framework for Modern Web Builders</title>',
             'name="description" content="SqueHub is a modern PHP framework for building secure, scalable web applications with simple APIs, powerful built-in tools, and flexible deployment."',
@@ -345,12 +560,7 @@ def main() -> None:
         ):
             if home_body.count(metadata) != 1:
                 issues.append(f'Site home metadata missing or duplicated: {metadata}')
-        icon_status, icon_headers, _ = response(base, '/assets/docs/images/squehub-icon.png')
-        if icon_status != 200 or not icon_headers.get('Content-Type', '').startswith('image/png'):
-            issues.append(f'Official PNG favicon is not publicly served: {icon_status}')
-        og_status, og_headers, _ = response(base, '/assets/images/og/squehub.png')
-        if og_status != 200 or not og_headers.get('Content-Type', '').startswith('image/png'):
-            issues.append(f'Social preview PNG is not publicly served: {og_status}')
+        issues.extend(verify_static_assets(base, asset_paths))
         status, _, _ = response(base, '/index.html')
         if status != 404:
             issues.append(f'/index.html should have no separate route or file: {status}')

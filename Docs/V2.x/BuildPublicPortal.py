@@ -61,7 +61,7 @@ V2_GROUPS = {
     "Views and frontend": "Views ViewResponses PackageViews CompiledViews ViewDiagnosticsTesting Fragments TemplateUtilities Includes Components ViewContext TemplateCompiler Conditionals Loops Layouts Assets ViewSecurity FrontendAssets FrontendProfiles SpaRouting FrontendAuth",
     "Database and ORM": "Database Schema Migrations Models Relationships Collections Pagination Scopes SoftDeletes Seeders Factories ApplicationData",
     "Identity and security": "Security Authentication MFA OAuth Authorization RBAC AccountSecurity RateLimiting Cryptography BrowserSecurityPolicy ApiTokens",
-    "API and integration": "ApiDevelopment ApplicationContract ApiVerification SdkGeneration ApiResources ApiResponses ApiVersioning Cors Webhooks AgentAndAI HttpClient",
+    "API and integration": "ApiDevelopment ApplicationContract ApiVerification SdkGeneration ApiResources ApiResponses ApiVersioning Cors Webhooks AgentAndAI AgentMcpSetup AgentMcpTools HttpClient",
     "Services and infrastructure": "Packages Kits ActivationRegistry LargeApplications Contributions ReviewableChanges Internationalization Cache InfrastructureAdapters Redis Events Storage ProviderStorage Mail ProviderMail Notifications Queue QueueComposition RedisQueue Broadcasting Scheduler Retries Locks CircuitBreaker Idempotency",
     "Operations and deployment": "Status Cli Setup Dev Studio Logging Diagnostics Observability Profiler Correlation PerformanceCaching Health Performance Deployment DeploymentProof ProjectBundles UpgradePreflight Recovery BackupAndPortability Troubleshooting",
     "Upgrade": "UpgradeFromV1",
@@ -303,13 +303,15 @@ def render_markdown(source: str, public_stems: dict[str, str]) -> tuple[str, lis
             flush_paragraph()
             close_list()
             cells = table_cells(stripped)
-            output.append("<table><thead><tr>" + "".join("<th>" + inline(cell, public_stems) + "</th>" for cell in cells) + "</tr></thead><tbody>")
+            output.append('<div class="table-scroll" role="region" '
+                          'aria-label="Scrollable documentation table" tabindex="0">'
+                          "<table><thead><tr>" + "".join("<th>" + inline(cell, public_stems) + "</th>" for cell in cells) + "</tr></thead><tbody>")
             index += 2
             while index < len(lines) and lines[index].lstrip().startswith("|"):
                 row = table_cells(lines[index])
                 output.append("<tr>" + "".join("<td>" + inline(cell, public_stems) + "</td>" for cell in row) + "</tr>")
                 index += 1
-            output.append("</tbody></table>")
+            output.append("</tbody></table></div>")
             continue
         item = re.match(r"^\s*([-*+] |\d+\. )(.+)$", line)
         if item:
@@ -471,14 +473,14 @@ def build(core_root: Path, historical_root: Path, output_root: Path) -> dict[str
             "search": search, "public": True,
             "fragment": f"Pages/v2.x/{page_slug}.html",
         })
-    # README is an internal working-tree index. A short curated public landing
-    # page avoids publishing its untracked/release-status notes as user guidance.
+    # README is an internal index. A short curated public landing page keeps
+    # release-process notes out of user guidance.
     v2_home = (
         '<h2 id="start-here">Start here</h2><p>These guides describe the current '
-        'SqueHub v2.0.0 development source. Begin with '
+        'SqueHub v2.0.0 source. Begin with '
         '<a href="/docs/v2.x/installation">installation</a>, then build a '
         '<a href="/docs/v2.x/first-application">first application</a>. '
-        'Version 2.0.0 is not yet a published Composer release.</p>'
+        'Select and verify an exact v2 source ref or Composer version.</p>'
         '<h2 id="learning-paths">Choose a path</h2>'
         '<div class="portal-grid">'
         '<a class="portal-card" href="/docs/v2.x/first-application"><span>Application foundations</span>'
@@ -490,6 +492,8 @@ def build(core_root: Path, historical_root: Path, output_root: Path) -> dict[str
         '<a class="portal-card" href="/docs/v2.x/status"><span>Operations</span>'
         '<strong>Check v2 status</strong><small>Release boundaries, qualified environments, and Package/Kit availability.</small></a>'
         '</div>'
+        '<p>Connecting an AI host? Follow the <a href="/docs/v2.x/agent-mcp-setup">local MCP setup</a> '
+        'and check the <a href="/docs/v2.x/agent-mcp-tools">capabilities and tools</a>.</p>'
         '<p>Continue with <a href="/docs/v2.x/deployment">deployment</a>, '
         '<a href="/docs/v2.x/health">Health and Doctor</a>, or the '
         '<a href="/docs/v2.x/upgrade-from-v1">v1 upgrade guide</a>.</p>\n'
@@ -550,8 +554,8 @@ def build(core_root: Path, historical_root: Path, output_root: Path) -> dict[str
     manifest: dict[str, object] = {
         "schema_version": 1,
         "versions": {
-            "v1.x": {"label": "v1.x (archive)", "home": "installation", "pages": v1_pages},
-            "v2.x": {"label": "v2.x (development)", "home": "index", "pages": v2_pages},
+            "v1.x": {"label": "v1.x — Legacy", "home": "installation", "pages": v1_pages},
+            "v2.x": {"label": "v2.x — Current", "home": "index", "pages": v2_pages},
         },
     }
     output_root.mkdir(parents=True, exist_ok=True)

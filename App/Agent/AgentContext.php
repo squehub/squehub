@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Agent;
 
 use App\Foundation\Application;
+use App\Foundation\FrameworkVersion;
 use App\Routing\RouteCache;
 use App\Routing\RouteRegistry;
 use App\Studio\StudioInspector;
@@ -16,7 +17,7 @@ use Throwable;
  */
 final class AgentContext
 {
-    public const VERSION = '2.0.0-dev';
+    public const VERSION = FrameworkVersion::CURRENT;
     public const STDIO_PROTOCOL = '2025-11-25';
 
     /** @param list<array{name:string,description:string}>|null $cliInventory */
@@ -29,8 +30,7 @@ final class AgentContext
     public function framework(): array
     {
         return [
-            'framework' => ['name' => 'SqueHub', 'version' => self::VERSION,
-                'release' => 'unreleased'],
+            'framework' => ['name' => 'SqueHub', 'version' => self::VERSION],
             'protocol' => ['transport' => 'stdio', 'supported_stdio' => self::STDIO_PROTOCOL],
             'application' => ['fingerprint' => $this->capabilities->applicationFingerprint()],
             'routing' => ['style' => 'path-first',

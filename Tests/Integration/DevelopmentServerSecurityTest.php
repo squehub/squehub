@@ -15,7 +15,12 @@ final class DevelopmentServerSecurityTest extends TestCase
     {
         $asset = $this->route('/assets/default/img/logo-icon.png');
         self::assertSame(0, $asset->getExitCode(), $asset->getErrorOutput());
-        self::assertSame('STATIC', $asset->getOutput());
+        $output = $asset->getOutput();
+        self::assertStringEndsWith('__STATUS__200', $output);
+        self::assertSame(
+            hash_file('sha256', dirname(__DIR__, 2) . '/public/assets/default/img/logo-icon.png'),
+            hash('sha256', substr($output, 0, -strlen('__STATUS__200')))
+        );
 
         // A PHP file placed under assets must go through the application,
         // even though the development server can execute PHP files itself.

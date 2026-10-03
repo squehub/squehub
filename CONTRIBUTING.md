@@ -4,7 +4,7 @@ Thank you for helping improve SqueHub. Please keep each proposed change focused,
 
 ## Choose the right version
 
-The public repository's default branch currently contains the historical v1 generation. The v2.0.0 source is in unpublished release-candidate preparation. Check the branch and the code you are working on before opening a pull request; v1 and v2 APIs and directory layouts differ. The [v1 to v2 guide](Docs/V2.x/UpgradeFromV1.md) records the main migration boundaries.
+Check the branch and version you are working on before opening a pull request; v1.x and v2.x APIs and directory layouts differ. The [v1 to v2 guide](https://www.squehub.com/docs/v2.x/upgrade-from-v1) records the main migration boundaries.
 
 ## Prepare a v2 development checkout
 

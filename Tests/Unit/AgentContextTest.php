@@ -33,7 +33,8 @@ final class AgentContextTest extends TestCase
             $framework = $agent->resource('squehub://framework');
             $routes = $agent->resource('squehub://routes');
             $contract = $agent->resource('squehub://application/contract');
-            self::assertSame('2.0.0-dev', $status['framework']['version']);
+            self::assertSame('2.0.0', $status['framework']['version']);
+            self::assertArrayNotHasKey('release', $status['framework']);
             self::assertSame('2025-11-25', $framework['protocol']['supported_stdio']);
             self::assertSame('path-first', $framework['routing']['style']);
             self::assertSame('partial', $routes['state']);

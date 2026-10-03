@@ -92,7 +92,7 @@ def preview_page(prefix: str, title: str, eyebrow: str, intro: str,
 <header class="site-header"><div class="header-inner"><a class="brand" href="{prefix}index.html">SqueHub<span class="brand-docs">/ Preview</span></a>
 <nav class="preview-nav" aria-label="Primary navigation"><a href="{prefix}docs/v2.x/index.html">Docs</a><a href="{prefix}packages/index.html">Packages</a><a href="{prefix}kits/index.html">Kits</a><a href="{prefix}community/index.html">Community</a></nav></div></header>
 <main id="main" class="preview-main"><span class="eyebrow">{esc(eyebrow)}</span><h1>{esc(title)}</h1><p class="preview-lead">{esc(intro)}</p>{content}</main>
-<footer class="site-footer"><div><strong>SqueHub</strong><p>v2.0.0 development preview</p></div><nav aria-label="Footer navigation"><a href="{prefix}index.html">Home</a><a href="{prefix}changelogs/index.html">Changelogs</a><a href="{prefix}contact/index.html">Contact</a></nav></footer>
+<footer class="site-footer"><div><strong>SqueHub</strong><p>SqueHub 2.0.0 documentation</p></div><nav aria-label="Footer navigation"><a href="{prefix}index.html">Home</a><a href="{prefix}changelogs/index.html">Changelogs</a><a href="{prefix}contact/index.html">Contact</a></nav></footer>
 </body></html>\n'''
 
 
@@ -112,16 +112,30 @@ def build_preview_pages(prototype: Path) -> None:
             '<div class="preview-box"><span class="example-badge">Planned · Not released</span><h2>Overview</h2><p>The application starter would compose SqueHub’s existing Auth capability. Its exact files and distribution details await a release.</p><a class="text-link" href="../../docs/v2.x/authentication.html">Read Auth documentation →</a></div><p class="preview-note"><a href="../index.html">← All Kits</a></p>'),
         'community/index.html': preview_page('../', 'Community', 'SqueHub / Community',
             'Follow SqueHub development, share ideas, and find contribution guidance.',
-            '<div class="preview-box"><h2>Get involved</h2><p>Start with the <a href="../docs/v2.x/contributions.html">contribution guide</a> and the current <a href="../docs/v2.x/index.html">v2 development documentation</a>.</p></div>'),
+            '<div class="preview-box"><h2>Get involved</h2><p>Start with the <a href="../docs/v2.x/contributions.html">contribution guide</a> and the current <a href="../docs/v2.x/index.html">v2.x documentation</a>.</p></div>'),
         'changelogs/index.html': preview_page('../', 'Changelogs', 'SqueHub / Changelogs',
-            'Track the framework as v2 work moves toward a qualified release.',
-            '<div class="preview-box"><span class="example-badge">Development</span><h2>v2.x is in progress</h2><p>There is no published v2.0.0 release history to present yet. Read the <a href="../docs/v2.x/upgrade-from-v1.html">upgrade guide</a> for the current development changes.</p></div>'),
+            'Read the available SqueHub release history and v2.x upgrade guidance.',
+            '<div class="preview-box"><h2>SqueHub release history</h2><p>Consult the published release notes for an exact version. The <a href="../docs/v2.x/upgrade-from-v1.html">upgrade guide</a> describes migration from v1.x; this prototype does not establish that a v2.0.0 release has been published.</p></div>'),
         'contact/index.html': preview_page('../', 'Contact', 'SqueHub / Contact',
             'Find the right channel for a SqueHub question or contribution.',
-            '<div class="preview-box"><h2>Start with the documentation</h2><p>For a technical question, consult the <a href="../docs/v2.x/index.html">development documentation</a> and <a href="../docs/v2.x/contributions.html">contribution guide</a>. Official contact channels will be listed here when confirmed.</p></div>'),
+            '<div class="preview-box"><h2>Start with the documentation</h2><p>For a technical question, consult the <a href="../docs/v2.x/index.html">v2.x documentation</a> and <a href="../docs/v2.x/contributions.html">contribution guide</a>. Official contact channels will be listed here when confirmed.</p></div>'),
     }
+    # The standalone prototype may already contain the reviewed ecosystem
+    # layout. Update only its framework-version copy; keep its Package/Kit
+    # catalog, planned-state labels, and page design intact.
+    for section in ('packages', 'kits', 'community', 'changelogs', 'contact',
+                    'partners'):
+        for target in (prototype / section).rglob('*.html'):
+            existing = target.read_text(encoding='utf-8')
+            if '<body class="ecosystem-page"' in existing:
+                updated = modern_ecosystem_copy(existing)
+                if updated != existing:
+                    target.write_text(updated, encoding='utf-8')
     for relative, document in pages.items():
         target = prototype / relative
+        if target.is_file() and '<body class="ecosystem-page"' in target.read_text(
+                encoding='utf-8'):
+            continue
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(document, encoding='utf-8')
     for relative in ('packages/sample-package/index.html', 'kits/sample-kit/index.html'):
@@ -130,6 +144,73 @@ def build_preview_pages(prototype: Path) -> None:
             stale.unlink()
             if not any(stale.parent.iterdir()):
                 stale.parent.rmdir()
+
+
+def modern_ecosystem_copy(document: str) -> str:
+    document = document.replace(
+        '<span class="current-version-state">In development</span>', '')
+    for old, current in (
+        ('SqueHub v2.0.0 in development', 'SqueHub 2.0.0 documentation'),
+        ('current development lifecycle and APIs', 'current lifecycle and APIs'),
+        ('current v2 development work', 'current v2.x guidance'),
+        ('current development guides', 'current v2.x guides'),
+        ('the v2 development path', 'v2.x source and release guidance'),
+        ('<span class="eyebrow">v2 development</span>',
+         '<span class="eyebrow">SqueHub 2.0.0</span>'),
+        ('SqueHub v2.0.0 is still an unpublished development tree.',
+         'This prototype does not establish a published SqueHub 2.0.0 release.'),
+    ):
+        document = document.replace(old, current)
+    return document
+
+
+def modern_landing_copy(landing: str) -> str:
+    """Refresh copy in the reviewed homepage without rebuilding its design."""
+    for marker in ('<main id="main" class="landing-main">',
+                   '<div id="squehub-preloader"',
+                   '<section class="sq-hero"',
+                   '<footer class="site-footer">'):
+        if marker not in landing:
+            raise ValueError(f'Modern prototype landing is missing {marker}')
+    for old, current in (
+        ('> In development <span class="sq-note-divider"',
+         '> SqueHub 2.0.0 <span class="sq-note-divider"'),
+        ('Optional in the development source', 'Optional local MCP integration'),
+        ('Optional profiles are available in the development source.',
+         'Optional profiles are available in SqueHub 2.0.0.'),
+        ('Set up the development source and make your first request.',
+         'Set up verified SqueHub 2.0.0 source and make your first request.'),
+        ('<small>Development documentation</small>',
+         '<small>SqueHub 2.0.0 documentation</small>'),
+    ):
+        landing = landing.replace(old, current)
+    return landing
+
+
+def finish_prototype(prototype: Path, article_count: int) -> None:
+    shutil.copy2(Path(__file__).parent / 'PortalAssets/portal.css',
+                 prototype / 'assets/css/portal.css')
+    build_preview_pages(prototype)
+    # Historical prototype entry points lead to their maintained versioned
+    # guides. An explicit link remains usable if a browser blocks the refresh.
+    for source, target in {
+        'api.html': 'docs/v2.x/api-development.html',
+        'guides/index.html': '../docs/v2.x/first-application.html',
+        'releases/index.html': '../docs/v2.x/upgrade-from-v1.html',
+    }.items():
+        destination = prototype / source
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        anchor = '<span id="v1"></span>' if source == 'releases/index.html' else ''
+        destination.write_text(
+            '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            '<meta name="robots" content="noindex,follow">'
+            f'<meta http-equiv="refresh" content="0;url={esc(target)}">'
+            '<title>Documentation moved · SqueHub</title></head><body>'
+            + anchor
+            + f'<p>This guide moved to <a href="{esc(target)}">the v2.x documentation</a>.</p>'
+            + '</body></html>\n', encoding='utf-8')
+    print(f'Built {article_count} versioned prototype articles.')
 
 
 def sidebar(version: str, pages: list[dict], active: str | None) -> str:
@@ -162,19 +243,21 @@ def home_fragment(version: str, pages: list[dict]) -> str:
         )
     else:
         intro = (
-            '<p class="doc-intro">Build a SqueHub application from the current '
-            'v2.0.0 development source. The public Composer release is not yet '
-            'qualified as v2.0.0. Begin with installation, then follow the guides '
-            'for routing, views, data, security, and deployment.</p>'
-            '<div class="version-note"><strong>Development documentation</strong> '
-            'The commands on these pages describe the v2 development checkout. '
-            'A future v2 release needs separate distribution verification.</div>'
+            '<p class="doc-intro">Build a SqueHub 2.0.0 application from a verified '
+            'v2 source ref or matching Composer version. Begin with installation, '
+            'then follow the guides for routing, views, data, security, and '
+            'deployment.</p>'
+            '<div class="version-note"><strong>Verify the source</strong> '
+            'Select an exact v2 ref or Composer version and confirm the resolved '
+            'package before following these commands. An unversioned Composer '
+            'command alone does not establish the installed generation.</div>'
             '<section class="docs-quickstart" aria-labelledby="docs-quickstart-title">'
             '<div><span class="eyebrow">A practical starting point</span>'
             '<h2 id="docs-quickstart-title">Build your first SqueHub page</h2>'
-            '<p>Install the complete development source, configure the application, '
-            'then create a route and a View. The published Composer create-project '
-            'flow awaits the v2 release.</p><a href="installation.html">Installation guide →</a></div>'
+            '<p>Install the verified v2 source, configure the application, then '
+            'create a route and a View. Use Composer create-project only after '
+            'confirming a matching published v2 version.</p>'
+            '<a href="installation.html">Installation guide →</a></div>'
             '<div class="code-block"><div class="code-bar"><span>PowerShell</span>'
             '<button class="copy-button" type="button" aria-label="Copy setup commands">Copy</button></div>'
             '<pre><code>composer install\nCopy-Item .example.env .env\n'
@@ -217,13 +300,14 @@ def static_page(template: str, version: str, page: dict | None,
     title = page['title'] if page else ('SqueHub v1.x archive' if version == 'v1.x'
                                          else 'SqueHub v2.x documentation')
     summary = page['summary'] if page else ('Historical SqueHub v1.x documentation.'
-                                             if version == 'v1.x' else 'The SqueHub v2.0.0 development guide.')
+                                             if version == 'v1.x' else 'The SqueHub 2.0.0 documentation guide.')
     category = page['category'] if page else 'Documentation'
     counterpart = next((p for p in other_pages if p['slug'] == slug), None)
     other_version = 'v1.x' if version == 'v2.x' else 'v2.x'
     other_url = f'../{other_version}/{counterpart["slug"]}.html' if counterpart else f'../{other_version}/index.html'
     canonical = f'https://www.squehub.com/docs/{version}' + (f'/{slug}' if slug else '')
     body = template
+    body = body.replace('<span class="current-version-state">In development</span>', '')
     body = re.sub(r'<title>.*?</title>',
                   lambda _: f'<title>{esc(title)} · SqueHub Docs</title>', body, count=1)
     body = re.sub(r'<meta name="description" content="[^"]*">',
@@ -264,9 +348,9 @@ def static_page(template: str, version: str, page: dict | None,
     body = body[:start] + (
         '<div class="version-menu" role="menu" hidden><span class="menu-eyebrow">Documentation version</span>'
         f'<a role="menuitem" href="{esc(other_url)}">{other_version}'
-        f'<small>{"Historical" if other_version == "v1.x" else "Development"}</small></a>'
+        f'<small>{"Legacy" if other_version == "v1.x" else "Current"}</small></a>'
         f'<a role="menuitem" aria-current="page" href="{esc((slug + ".html") if slug else "index.html")}">'
-        f'{version}<small>{"Historical" if version == "v1.x" else "Development"}</small></a></div>'
+        f'{version}<small>{"Legacy" if version == "v1.x" else "Current"}</small></a></div>'
     ) + body[end:]
     body = body.replace('>v2.0.0 <span aria-hidden="true">⌄</span>',
                         f'>{version} <span aria-hidden="true">⌄</span>', 1)
@@ -296,7 +380,7 @@ def static_page(template: str, version: str, page: dict | None,
         f'<header class="article-header"><span class="article-kicker">{esc(category)}'
         f' <span>·</span> {version}</span><h1>{esc(title)}</h1>'
         f'<p class="lead">{esc(summary)}</p><div class="article-meta"><span class="badge">{version}</span>'
-        f'<span>{"Historical v1 reference" if version == "v1.x" else "v2.0.0 development documentation"}</span>'
+        f'<span>{"Historical v1 reference" if version == "v1.x" else "SqueHub 2.0.0 documentation"}</span>'
         '</div></header>'
     ) + body[end:]
     start = body.index('<div class="article-content">')
@@ -379,6 +463,12 @@ def main() -> None:
         'window.SQUEHUB_SEARCH_INDEX = ' + json.dumps(index, ensure_ascii=False,
             separators=(',', ':')).replace('<', '\\u003c') + ';\n', encoding='utf-8')
     landing = (prototype / 'index.html').read_text(encoding='utf-8')
+    if '<title>SqueHub — The PHP Framework for Modern Web Builders</title>' in landing:
+        updated = modern_landing_copy(landing)
+        if updated != landing:
+            (prototype / 'index.html').write_text(updated, encoding='utf-8')
+        finish_prototype(prototype, len(index))
+        return
     # The prototype is rebuilt during editing; strip our own head additions
     # before adding them again so each build remains byte-for-byte stable.
     for pattern in (
@@ -435,7 +525,7 @@ def main() -> None:
         '<span class="menu-eyebrow">Documentation version</span>'
         '<a role="menuitem" href="docs/v1.x/index.html">v1.x<small>Historical</small></a>'
         '<a role="menuitem" aria-current="page" href="docs/v2.x/index.html">'
-        'v2.x<small>Development</small></a></div>'
+        'v2.x<small>Current</small></a></div>'
     ) + landing[end:]
     for old, current in {
         'docs/routing/index.html': 'docs/v2.x/routing.html',
@@ -458,7 +548,7 @@ def main() -> None:
         '<meta property="og:title" content="SqueHub v2.x documentation"></head>', 1)
     landing = re.sub(r'<title>.*?</title>',
                      '<title>SqueHub v2.x · Documentation</title>', landing, count=1)
-    landing = landing.replace('THE V2 DOCUMENTATION', 'V2.0.0 DEVELOPMENT DOCUMENTATION')
+    landing = landing.replace('THE V2 DOCUMENTATION', 'SQUEHUB 2.0.0 DOCUMENTATION')
     landing = re.sub(
         r'<div class="terminal-lines">.*?</div>',
         '<div class="terminal-lines"><span><i>01</i><b>$</b> composer install</span>'
@@ -468,10 +558,10 @@ def main() -> None:
         '<span><i>05</i><b>$</b> php squehub doctor</span>'
         '<span><i>06</i><b>$</b> php squehub start</span></div>',
         landing, count=1, flags=re.S)
-    landing = landing.replace('Ready when you are', 'Development source')
+    landing = landing.replace('Ready when you are', 'Verified v2 source')
     landing = landing.replace('v2.0.0</span>', 'v2.x</span>')
     landing = landing.replace('SqueHub v2.0.0 documentation',
-                              'SqueHub v2.0.0 development documentation')
+                              'SqueHub 2.0.0 documentation')
     # Rebuild the home additions from a single source of truth. The prototype
     # itself is the reviewed input for the staged SqueHub landing View.
     landing = re.sub(r'\s*<!-- portal-home:discovery -->.*?<!-- /portal-home:discovery -->\s*',
@@ -490,33 +580,11 @@ def main() -> None:
         '<a href="community/index.html">Community</a>'
         '<a href="changelogs/index.html">Changelogs</a>'
         '<a href="contact/index.html">Contact</a>'
-        '</nav><small>SqueHub v2.0.0 development documentation</small></footer>'
+        '</nav><small>SqueHub 2.0.0 documentation</small></footer>'
     ) + landing[end:]
     landing = re.sub(r'(?m)^[ \t]+$', '', landing)
     (prototype / 'index.html').write_text(landing, encoding='utf-8')
-    shutil.copy2(Path(__file__).parent / 'PortalAssets/portal.css',
-                 prototype / 'assets/css/portal.css')
-    build_preview_pages(prototype)
-    # Historical prototype entry points lead to their maintained versioned
-    # guides. An explicit link remains usable if a browser blocks the refresh.
-    for source, target in {
-        'api.html': 'docs/v2.x/api-development.html',
-        'guides/index.html': '../docs/v2.x/first-application.html',
-        'releases/index.html': '../docs/v2.x/upgrade-from-v1.html',
-    }.items():
-        destination = prototype / source
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        anchor = '<span id="v1"></span>' if source == 'releases/index.html' else ''
-        destination.write_text(
-            '<!doctype html><html lang="en"><head><meta charset="utf-8">'
-            '<meta name="viewport" content="width=device-width,initial-scale=1">'
-            '<meta name="robots" content="noindex,follow">'
-            f'<meta http-equiv="refresh" content="0;url={esc(target)}">'
-            '<title>Documentation moved · SqueHub</title></head><body>'
-            + anchor
-            + f'<p>This guide moved to <a href="{esc(target)}">the v2.x documentation</a>.</p>'
-            + '</body></html>\n', encoding='utf-8')
-    print(f'Built {len(index)} versioned prototype articles.')
+    finish_prototype(prototype, len(index))
 
 
 if __name__ == '__main__':

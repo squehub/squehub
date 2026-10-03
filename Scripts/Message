@@ -3,20 +3,78 @@
 declare(strict_types=1);
 
 /**
- * Show the next setup steps after Composer creates a SqueHub application.
- * This script runs before .env exists, so it must not boot the application.
+ * Print the post-install guide without booting the application. Composer runs
+ * this script before an application environment or database may exist.
  */
 fwrite(STDOUT, <<<'MESSAGE'
 
-SqueHub is installed.
+ $$$$$$\   $$$$$$\  $$\   $$\ $$$$$$$$\ $$\   $$\ $$\   $$\ $$$$$$$\
+$$  __$$\ $$  __$$\ $$ |  $$ |$$  _____|$$ |  $$ |$$ |  $$ |$$  __$$\
+$$ /  \__|$$ /  $$ |$$ |  $$ |$$ |      $$ |  $$ |$$ |  $$ |$$ |  $$ |
+\$$$$$$\  $$ |  $$ |$$ |  $$ |$$$$$\    $$$$$$$$ |$$ |  $$ |$$$$$$$\ |
+ \____$$\ $$ |  $$ |$$ |  $$ |$$  __|   $$  __$$ |$$ |  $$ |$$  __$$\
+$$\   $$ |$$ $$\$$ |$$ |  $$ |$$ |      $$ |  $$ |$$ |  $$ |$$ |  $$ |
+\$$$$$$  |\$$$$$$ / \$$$$$$  |$$$$$$$$\ $$ |  $$ |\$$$$$$  |$$$$$$$  |
+ \______/  \___$$$\  \______/ \________|\__|  \__| \______/ \_______/
+               \___|
 
-Next steps:
-  1. Copy .example.env to .env.
-  2. Run php squehub key:generate and set APP_KEY in .env.
-  3. Review your application and database settings.
-  4. Run php squehub doctor, then php squehub start.
+                 ✨ The PHP Framework for Modern Web Builders ✨
+================================================================================
+ Welcome to SqueHub v2.0.0. Your application source is ready to configure.
+================================================================================
 
-Run php squehub help to see the available commands.
+ 🔧 CONFIGURE YOUR APPLICATION
+    Windows PowerShell                 Copy-Item .example.env .env
+    Linux / macOS                      cp .example.env .env
+    Generate a private key             php squehub key:generate
+
+    Paste the complete generated value into APP_KEY in .env. Then review
+    APP_ENV, APP_DEBUG, database settings, and the services you intend to use.
+    For a reviewable setup plan, run:  php squehub setup
+
+ 🚀 QUICK START
+    Check installation                php squehub doctor
+    List application routes           php squehub route:list
+    Start development server          php squehub start
+    List every CLI command            php squehub help
+
+ 🛠  GENERATE APPLICATION CODE
+    Controller                        php squehub make:controller BlogController
+    Model                             php squehub make:model Post
+    Middleware                        php squehub make:middleware AuthMiddleware
+    Migration                         php squehub make:migration create_posts
+    Seeder                            php squehub make:seeder PostSeeder
+
+ 🗄  DATABASE AND SEEDERS
+    Apply pending migrations          php squehub migrate
+    Review migration status           php squehub migrate:status
+    Roll back latest migration batch  php squehub migrate:rollback
+    Run application seeders           php squehub seed
+    List available seeders            php squehub seed:status
+    Roll back a reversible seeder     php squehub seed:rollback PostSeeder
+
+ 📦 PACKAGES AND KITS
+    Install Package from source       php squehub package:install <source>
+    Inspect installed Packages        php squehub package:list
+    Install Kit from local source     php squehub kit:install <source>
+    Inspect installed Kits            php squehub kit:list
+
+ 🧰 UTILITIES
+    Clear application cache           php squehub cache:clear
+    Clear compiled Views              php squehub view:clear
+    Inspect available commands        php squehub help
+
+ 📚 DOCUMENTATION
+    Installation guide
+      https://www.squehub.com/docs/v2.x/installation
+    CLI reference
+      https://www.squehub.com/docs/v2.x/cli
+    Source repository
+      https://github.com/squehub/squehub
+
+ Build something useful. SqueHub will keep the framework and your Project/
+ application code clearly separated as it grows.
+================================================================================
 
 MESSAGE
 );

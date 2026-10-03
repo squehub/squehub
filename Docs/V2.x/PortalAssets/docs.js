@@ -7,6 +7,10 @@
   const rootUrl = new URL(body.dataset.siteRoot || '/', location.href);
   const resolve = path => new URL(path.replace(/^\//, ''), rootUrl).href;
   const activeVersion = body.dataset.version || 'v2.x';
+  const landingSearch = body.classList.contains('portal-page');
+  const searchDisplayText = value => landingSearch
+    ? value.replace(/\s*\bv2(?:\.(?:x|\d+(?:\.\d+)*))?\b/gi, '').replace(/\s{2,}/g, ' ').trim()
+    : value;
 
   // A visitor's explicit choice takes priority over the operating system.
   const themes = ['system', 'light', 'dark'];
@@ -93,10 +97,14 @@
   let selected = 0;
   let previousFocus = null;
   const index = (window.SQUEHUB_SEARCH_INDEX || []).filter(page => page.version === activeVersion);
+  // Match the build-time index's word, dot, and hyphen token boundaries.
+  const searchWords = value => [...new Set(value.toLocaleLowerCase()
+    .match(/[\p{L}\p{N}_.-]+/gu) || [])];
 
   function highlight(element, value, query) {
-    const needle = query.trim().split(/\s+/)[0] || '';
-    const at = needle ? value.toLocaleLowerCase().indexOf(needle.toLocaleLowerCase()) : -1;
+    const lower = value.toLocaleLowerCase();
+    const needle = searchWords(query).find(word => lower.includes(word)) || '';
+    const at = needle ? lower.indexOf(needle) : -1;
     if (at < 0) { element.textContent = value; return; }
     element.append(document.createTextNode(value.slice(0, at)));
     const mark = document.createElement('mark');
@@ -129,7 +137,7 @@
   function renderResults() {
     if (!results || !input) return;
     const query = input.value.trim().slice(0, 120);
-    const words = query.toLocaleLowerCase().split(/\s+/).filter(Boolean);
+    const words = searchWords(query);
     matches = words.length
       ? index.map(page => ({page, rank: score(page, words)}))
         .filter(item => item.rank > 0)
@@ -156,13 +164,15 @@
       link.setAttribute('aria-selected', String(position === 0));
       const category = document.createElement('span');
       category.className = 'result-category';
-      category.textContent = `${page.version} · ${page.category}`;
+      category.textContent = landingSearch
+        ? `Documentation · ${searchDisplayText(page.category)}`
+        : `${page.version} · ${page.category}`;
       const title = document.createElement('strong');
-      highlight(title, page.title, query);
+      highlight(title, searchDisplayText(page.title), query);
       const summary = document.createElement('small');
       const section = (page.sections || []).find(heading =>
         words.some(word => heading.toLocaleLowerCase().includes(word)));
-      highlight(summary, section ? `In ${section} · ${page.summary}` : page.summary, query);
+      highlight(summary, searchDisplayText(section ? `In ${section} · ${page.summary}` : page.summary), query);
       link.append(category, title, summary);
       link.addEventListener('mouseenter', () => select(position));
       results.append(link);

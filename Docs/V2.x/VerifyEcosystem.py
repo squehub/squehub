@@ -8,6 +8,7 @@ and private-source containment after a staged portal deployment.
 from __future__ import annotations
 
 import argparse
+from email.message import Message
 from urllib.error import HTTPError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
@@ -19,14 +20,16 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
-def fetch(base: str, path: str) -> tuple[int, dict[str, str], str]:
+def fetch(base: str, path: str) -> tuple[int, Message, str]:
     request = Request(base.rstrip('/') + path, headers={'Accept': 'text/html'})
     try:
         with build_opener(NoRedirect).open(request, timeout=10) as response:
-            return (response.status, dict(response.headers),
+            # HTTP header names are case-insensitive; retain that behavior on
+            # LiteSpeed and other servers that emit lowercase field names.
+            return (response.status, response.headers,
                     response.read().decode('utf-8', 'replace'))
     except HTTPError as error:
-        return (error.code, dict(error.headers),
+        return (error.code, error.headers,
                 error.read().decode('utf-8', 'replace'))
 
 
@@ -50,10 +53,16 @@ def main() -> None:
         checks += 1
         if status != 200 or '<!doctype html>' not in body.lower() or expected not in body:
             issues.append(f'{path}: expected a rendered {expected} page, received {status}')
-        if 'class="current-version-banner"' not in body \
+        # The public landing uses product positioning; version identity remains
+        # explicit on the ecosystem and documentation pages.
+        if path == '/':
+            if 'SqueHub — The PHP Framework for Modern Web Builders' not in body:
+                issues.append('/: framework positioning is missing')
+        elif 'class="current-version-banner"' not in body \
                 or '<strong>v2.0.0</strong>' not in body \
-                or 'In development' not in body:
-            issues.append(f'{path}: current development version is missing')
+                or 'Current SqueHub version' not in body \
+                or 'In development' in body:
+            issues.append(f'{path}: stale version copy')
         if headers.get('X-Content-Type-Options') != 'nosniff' \
                 or 'default-src' not in headers.get('Content-Security-Policy', ''):
             issues.append(f'{path}: response security headers are missing')

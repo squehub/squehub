@@ -1,6 +1,6 @@
 # Returnable View Responses
 
-`View::response()` renders a complete `.squehub.php` page and returns a normal `App\Http\Response`. Use it from a controller or route when the page needs an explicit HTTP status or headers. It is available through the application-facing `App\Plugins\View` gateway in this v2 development working tree; v2.0.0 has not been published.
+`View::response()` renders a complete `.squehub.php` page and returns a normal `App\Http\Response`. Use it from a controller or route when the page needs an explicit HTTP status or headers. It is available through the application-facing `App\Plugins\View` gateway in v2.
 
 ```php
 use App\Plugins\{Response, View};

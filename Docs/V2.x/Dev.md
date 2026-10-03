@@ -1,6 +1,6 @@
 # SqueHub Dev
 
-**SqueHub Dev** runs a coordinated local development session from the application root. The command is available in the v2.0.0 development working tree; it is not part of a published stable v2 release.
+**SqueHub Dev** runs a coordinated local development session from the application root. It is available through the v2 `squehub` CLI.
 
 ```bash
 php squehub dev

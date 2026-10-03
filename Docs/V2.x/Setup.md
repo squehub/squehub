@@ -1,12 +1,12 @@
 # SqueHub Setup
 
-**SqueHub Setup** is the optional guided configuration command for the v2 development source:
+**SqueHub Setup** is the optional guided configuration command for a v2 application:
 
 ```bash
 php squehub setup
 ```
 
-It inspects the existing application before proposing changes. The normal manual installation path remains supported and does not require Setup. This guide describes the current working tree, which is not a published v2 Composer release.
+It inspects the existing application before proposing changes. The normal manual installation path remains supported and does not require Setup. Select and verify a complete v2 source or package as described in [Installation](Installation.md).
 
 ## Fresh application
 

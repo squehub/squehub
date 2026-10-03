@@ -51,6 +51,17 @@ def main() -> None:
         for source in (args.catalog / 'Pages' / version).glob('*.html'):
             shutil.copy2(source, target / source.name)
 
+    # The routed documentation chrome is versioned with the source catalog;
+    # staging must not inherit an older release label from the local site.
+    page_view = args.stage / 'Project/Views/Docs/Page.squehub.php'
+    page_view.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(Path(__file__).parent / 'PortalAssets/Page.squehub.php', page_view)
+
+    site_page_view = args.stage / 'Project/Views/Site/Page.squehub.php'
+    site_page_view.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(Path(__file__).parent / 'PortalAssets/SitePage.squehub.php',
+                 site_page_view)
+
     assets = args.stage / 'public/assets/docs'
     for css in ('variables.css', 'base.css', 'layout.css',
                 'components.css', 'responsive.css', 'site.css'):
@@ -74,7 +85,7 @@ def main() -> None:
                  assets / 'css/preloader.css')
     destination = assets / 'js/docs.js'
     destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(args.prototype_root / 'assets/js/docs.js', destination)
+    shutil.copy2(Path(__file__).parent / 'PortalAssets/docs.js', destination)
     shutil.copy2(Path(__file__).parent / 'PortalAssets/preloader.js',
                  assets / 'js/preloader.js')
     shutil.copy2(Path(__file__).parent / 'PortalAssets/landing.js',
@@ -118,9 +129,10 @@ def main() -> None:
     # The reviewed prototype landing is compiled as a SqueHub View. Runtime
     # requests never read the prototype tree or build-time Markdown sources.
     landing = (args.prototype_root / 'index.html').read_text(encoding='utf-8')
-    landing = landing.replace('assets/css/', '/assets/docs/css/')
-    landing = landing.replace('assets/js/', '/assets/docs/js/')
-    landing = landing.replace('assets/images/', '/assets/docs/images/')
+    # Restrict rewriting to relative attribute URLs. A mirrored prototype has
+    # absolute Open Graph URLs whose /assets/images/ path must remain intact.
+    landing = re.sub(r'(["\'])assets/(css|js|images)/',
+                     r'\1/assets/docs/\2/', landing)
     landing = re.sub(
         r'(["\'])docs/(v[12]\.x)/(index|[a-z0-9-]+)\.html\1',
         lambda match: match.group(1) + '/docs/' + match.group(2)
@@ -137,12 +149,49 @@ def main() -> None:
         'changelogs/index.html': '/changelogs',
         'contact/index.html': '/contact',
         'partner/index.html': '/partners',
+        'partners/index.html': '/partners',
     }.items():
         landing = landing.replace(f'href="{static_path}"', f'href="{route}"')
     landing = landing.replace('href="index.html"', 'href="/"')
     landing = landing.replace('data-site-root="./"', 'data-site-root="/"')
     landing = landing.replace('https://www.squehub.com/docs/v2.x',
                               'https://www.squehub.com/')
+    # The prototype can be a static mirror of the reviewed routed landing.
+    # Its metadata and chrome are already final; only URLs and the maintained
+    # main content need staging for the PHP View in that case.
+    if '<title>SqueHub — The PHP Framework for Modern Web Builders</title>' in landing:
+        for marker in (
+            '<meta property="og:title" content="SqueHub — Modern PHP Framework">',
+            '<div id="squehub-preloader"',
+            '<footer class="site-footer">',
+        ):
+            if marker not in landing:
+                raise ValueError(f'Mirrored prototype landing is missing {marker}')
+        landing = replace_once(landing,
+            r'src="/assets/docs/js/search-index\.js(?:\?v=[A-Za-z0-9]+)?"',
+            'src="/assets/docs/js/search-index.js?v=20261003e"',
+            'documentation search index')
+        landing = replace_once(landing,
+            r'src="/assets/docs/js/docs\.js(?:\?v=[A-Za-z0-9]+)?"',
+            'src="/assets/docs/js/docs.js?v=20261003e"',
+            'documentation search script')
+        landing_main = (Path(__file__).parent / 'PortalAssets/landing-main.html').read_text(
+            encoding='utf-8').strip()
+        for marker, source in (
+            ('<!-- portal-home:platform -->', 'PortalAssets/landing-platform.html'),
+            ('<!-- portal-home:studio -->', 'PortalAssets/landing-studio.html'),
+        ):
+            if landing_main.count(marker) != 1:
+                raise ValueError(f'Landing main must contain one {marker}')
+            landing_main = landing_main.replace(marker,
+                (Path(__file__).parent / source).read_text(encoding='utf-8').strip())
+        landing = replace_literal_once(landing, r'<main id="main"[^>]*>.*?</main>',
+                                       landing_main, 'landing main content')
+        destination = args.stage / 'Project/Views/Docs/Landing.squehub.php'
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(landing, encoding='utf-8')
+        print(f'Staged {len(index)} articles and version-aware search entries.')
+        return
     landing = replace_once(
         landing, r'<title>SqueHub v2\.x · Documentation</title>',
         '<title>SqueHub — The PHP Framework for Modern Web Builders</title>',
@@ -217,22 +266,23 @@ def main() -> None:
         '<nav class="mobile-site-nav" aria-label="Mobile primary navigation" hidden><a href="/" aria-current="page">Home</a><a href="/docs/v2.x">Docs</a><a href="/packages">Packages</a><a href="/kits">Kits</a><a href="/community">Community</a><a href="/partners">Partners</a><a href="/changelogs">Changelogs</a><a href="/contact">Contact</a></nav>',
         'mobile navigation',
     )
-    version_banner = (
-        '<div class="current-version-banner" role="note">'
-        '<span>Current SqueHub version</span><strong>v2.0.0</strong>'
-        '<span class="current-version-state">In development</span></div>'
-    )
-    landing = replace_once(
-        landing,
-        r'(<nav class="mobile-site-nav" aria-label="Mobile primary navigation" hidden>.*?</nav>)',
-        r'\1' + '\n' + version_banner,
-        'current version banner',
-    )
     landing = replace_once(
         landing,
         r'href="/assets/docs/css/portal\.css"',
         'href="/assets/docs/css/portal.css?v=20261003c"',
         'portal stylesheet',
+    )
+    landing = replace_once(
+        landing,
+        r'src="/assets/docs/js/search-index\.js"',
+        'src="/assets/docs/js/search-index.js?v=20261003e"',
+        'documentation search index',
+    )
+    landing = replace_once(
+        landing,
+        r'src="/assets/docs/js/docs\.js"',
+        'src="/assets/docs/js/docs.js?v=20261003e"',
+        'documentation search script',
     )
     landing_main = (Path(__file__).parent / 'PortalAssets/landing-main.html').read_text(
         encoding='utf-8').strip()
@@ -258,13 +308,13 @@ def main() -> None:
     )
     landing = replace_once(
         landing, r'<footer class="site-footer">.*?</footer>',
-        '<footer class="site-footer"><div><strong>SqueHub</strong><p>A modern PHP framework built for clarity and portability.</p></div><nav aria-label="Footer navigation"><a href="/docs/v2.x">Documentation</a><a href="/packages">Packages</a><a href="/kits">Kits</a><a href="/community">Community</a><a href="/partners">Partners</a><a href="/changelogs">Changelogs</a><a href="/contact">Contact</a></nav><small>SqueHub v2.0.0 development documentation</small></footer>',
+        '<footer class="site-footer"><div><strong>SqueHub</strong><p>A modern PHP framework built for clarity and portability.</p></div><nav aria-label="Footer navigation"><a href="/docs/v2.x">Documentation</a><a href="/packages">Packages</a><a href="/kits">Kits</a><a href="/community">Community</a><a href="/partners">Partners</a><a href="/changelogs">Changelogs</a><a href="/contact">Contact</a></nav><small>Documentation</small></footer>',
         'landing footer',
     )
     landing = replace_once(
         landing,
         r'</head>',
-        '    <link rel="stylesheet" href="/assets/docs/css/landing.css?v=20261003b">\n'
+        '    <link rel="stylesheet" href="/assets/docs/css/landing.css?v=20261003e">\n'
         '    <link rel="stylesheet" href="/assets/docs/css/landing-platform.css?v=20261003a">\n'
         '    <link rel="stylesheet" href="/assets/docs/css/landing-studio.css?v=20261003a">\n'
         '    <script defer src="/assets/docs/js/landing.js?v=20261003a"></script>\n'

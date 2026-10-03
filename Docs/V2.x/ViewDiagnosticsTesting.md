@@ -2,8 +2,6 @@
 
 SqueHub identifies View failures by their **logical View name**, source line where known, and the dependency being resolved. Application tests can render a View through the real Application and assert its output without making an HTTP request. These are parts of the existing View and [testing](Testing.md) systems; there is no second renderer or separate diagnostics service.
 
-The APIs on this page describe the v2.0.0 development working tree. This is not a published v2 release.
-
 ## Read a compiler diagnostic
 
 A structural template error is an `App\View\Compiler\CompilerException`. For example, an unclosed directive produces a message equivalent to:

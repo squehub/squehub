@@ -87,17 +87,19 @@ final class BasePathDevelopmentServerTest extends TestCase
         try {
             $project->write('Config/Http.php', '<?php return ["base_path" => "/fixture"];');
             $project->write('public/assets/Packages/Disabled/js/app.mjs', 'STATIC_COLLISION');
-            $response = $this->fixtureRoute($project,
-                '/fixture/assets/Packages/Disabled/js/app.mjs', '/app');
-            self::assertSame(0, $response->getExitCode(), $response->getErrorOutput());
-            self::assertSame('APP_FALLBACK__STATUS__404', $response->getOutput());
-            self::assertStringNotContainsString('STATIC_COLLISION', $response->getOutput());
+            foreach (['Packages', 'packages', 'PACKAGES'] as $directory) {
+                $response = $this->fixtureRoute($project,
+                    '/fixture/assets/' . $directory . '/Disabled/js/app.mjs', '/app');
+                self::assertSame(0, $response->getExitCode(), $response->getErrorOutput());
+                self::assertSame('APP_FALLBACK__STATUS__404', $response->getOutput());
+                self::assertStringNotContainsString('STATIC_COLLISION', $response->getOutput());
+            }
 
             $rewrite = (string) file_get_contents(dirname(__DIR__, 2) . '/public/.htaccess');
             self::assertStringContainsString(
-                'RewriteRule ^assets/Packages(?:/|$) index.php [QSA,L]', $rewrite);
+                'RewriteRule ^assets/Packages(?:/|$) index.php [QSA,L,NC]', $rewrite);
             self::assertLessThan(strpos($rewrite, 'RewriteCond %{REQUEST_FILENAME} !-f'),
-                strpos($rewrite, 'RewriteRule ^assets/Packages(?:/|$) index.php [QSA,L]'));
+                strpos($rewrite, 'RewriteRule ^assets/Packages(?:/|$) index.php [QSA,L,NC]'));
         } finally {
             $project->remove();
         }

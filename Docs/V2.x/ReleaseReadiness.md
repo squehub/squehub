@@ -1,14 +1,104 @@
 # SqueHub v2 release readiness
 
+## Phase 28 release candidate — initial local qualification (3 October 2026)
+
+The first local `release/v2.0.0` candidate commit was
+`fc62a1367c28220b722c417d26780a9e00364ec9`. It tracks 1,551 release paths,
+including framework source, `Docs/`, `Tests/`, `composer.lock`, and
+`phpunit.xml.dist`. Fresh Windows and native, case-sensitive Linux clones were
+created from that exact commit. Both installed the 119 locked Composer packages;
+strict Composer validation, a locked audit with **zero advisories**, and lint of
+1,339 first-party PHP files passed. A separate native Linux clean clone installed
+with `--no-dev` and passed ordinary CLI, SQLite Doctor, route, and Agent-status
+smokes without the optional MCP SDK.
+
+The initial exact-commit Linux full suite passed **2,957 tests, 23,027
+assertions, 31 skips, zero failures, and zero errors** on PHP 8.5.4 and SQLite
+3.46.1. An isolated Redis 8.0.5 / PhpRedis run on loopback port 16379 passed
+**9 guarded tests, 76 assertions, three alternate-client skips**; its database
+had zero keys before that owned server was stopped. A separate user-owned MySQL
+8.4.11/InnoDB instance on loopback port 33306 passed **11 guarded tests and
+570 assertions**. The Linux full suite with MySQL opt-in passed **2,957 tests,
+23,597 assertions, 20 skips, zero failures, and zero errors**. Each guarded
+test left the disposable database empty; the database, restricted test user,
+server, and data directory were then removed. Neither existing MySQL service
+nor XAMPP MySQL was used or changed.
+
+The initial exact-commit Windows PHP 8.2.12 / SQLite 3.39.2 full suite ran
+**2,957 tests, 22,802 assertions, 87 skips, one failure, and zero errors**. The
+single failure was a test fixture's literal newline changing to CRLF in a
+Windows checkout; the compiler preserved the source newline as designed. A
+line-ending-independent fixture correction subsequently passed its focused
+working-tree test. The correction and subsequent documentation/source-check
+updates are outside this initial commit, so these results cannot qualify their
+eventual commit. A broad PHPStan level 3 pass reported 55 findings in legacy
+symbols and existing type declarations;
+this is recorded as an open static-analysis baseline, not a passing broad gate.
+
+Composer `create-project` through a **local VCS repository** installed this
+exact commit with the normal distribution preference and ran its setup message.
+The installed project passed Doctor, route and Agent-status CLI checks, rendered
+the home page and CSS through a local HTTP server, and applied all 13 shipped
+migrations to a disposable SQLite database. This proves the local VCS package
+path only. At this checkpoint, the public Packagist package and GitHub default
+branch exposed the earlier generation. The production `/docs/v2.x` route
+returned 404, while the local XAMPP portal passed its route and link checks. The GitHub
+CI workflow had not run remotely at this checkpoint. **No v2 tag, push, public
+release, or release approval is claimed by this initial qualification.**
+
+### Phase 28C public documentation deployment (3 October 2026)
+
+After the initial candidate checkpoint, the user deployed the current framework
+and documentation site to the root domain at `https://squehub.com/` through
+cPanel. The production origin identified as LiteSpeed served `/`, `/docs`,
+`/docs/v1.x`, `/docs/v2.x`, and representative articles. The canonical
+`/assets/...` documentation CSS, JavaScript, icon, and social image returned
+their expected bytes and media types; selected direct private and noncanonical
+source paths were denied. The production portal verifier passed **143 catalog pages,
+1,451 internal links, and 144 live documentation HTTP pages with zero issues**.
+The separate production ecosystem verifier passed **35 HTTP checks with zero
+issues**. These checks include the root-domain documentation and ecosystem
+routes, not a cPanel subdirectory-hosting profile.
+
+This closes the bounded public documentation deployment check for the content
+tested on that date. It does not prove that the deployed files are identical to
+a later release commit or that the public Composer package contains v2.0.0.
+Rebuild and repeat the public checks against the final candidate if its
+documentation or site source changes. A new exact-commit checkout, Windows and
+Linux regressions, public package installation, remote CI, and the final release
+decision remain open.
+
+### Final candidate verification record
+
+The initial clean-checkout results belong to `fc62a13` only; the later public
+site result is a separate deployed-content check. Record each follow-up candidate's
+full commit ID and clean-checkout results in this section before changing its
+release status. The final report should identify the exact commit and record:
+
+- locked Composer install, strict validation, audit, and first-party PHP lint;
+- Windows and native case-sensitive Linux full-suite outcomes from fresh checkouts, including the corrected Windows fixture;
+- any live MySQL, Redis, and other optional-service claims made for that candidate;
+- local VCS and public Composer installation outcomes separately;
+- generated documentation build, link and route checks, plus public deployment results;
+- remote CI outcome, any accepted static-analysis findings, and the explicit release decision.
+
+The release gate closes only when the final candidate's recorded evidence and
+the chosen publication checks support that decision. Earlier results are
+historical evidence and do not transfer automatically to a later commit.
+
+The phase-specific records below preserve their original historical evidence.
+Statements about an untracked or ignored v2 tree describe those earlier
+checkpoints; this Phase 28 section is the current artifact status.
+
 ## Phase 27 public documentation — local implementation complete
 
-Phase 27A–27D is **complete for the local Windows/XAMPP documentation portal**. The current v2 site uses a reviewed responsive docs layout and separate historical `/docs/v1.x` and current-development `/docs/v2.x` catalogs; `/docs` redirects to v2. The current local catalog contains **18 v1 articles and 122 public v2 guide files plus a curated v2 home**. The Phase 28 local rerun of `VerifyPortal.py` reported **141 catalog pages, 1,401 checked internal links, zero issues**, and **142 local documentation HTTP pages**; its Phase 27 predecessor recorded 140 pages, 1,312 links, and 141 HTTP pages. Representative desktop/mobile, search, version switching, theme, and docs 404 flows were inspected in Phase 27. The root landing is served by `/`; there is no intended physical `/index.html` entry point. See the [internal Phase 27 report](Phase27PublicDocs.md) for the complete v1 route table, v2 source coverage, design, and build/stage/deploy/verify workflow.
+Phase 27A–27D is **complete for the local Windows/XAMPP documentation portal**. The current v2 site uses a reviewed responsive docs layout and separate historical `/docs/v1.x` and v2 `/docs/v2.x` catalogs; `/docs` redirects to v2. The current local catalog contains **18 v1 articles and 124 public v2 guide files plus a curated v2 home**. The latest local `VerifyPortal.py` run reported **143 catalog pages, 1,451 checked internal links, zero issues**, and **144 local documentation HTTP pages**; the original Phase 27 checkpoint recorded 140 pages, 1,312 links, and 141 HTTP pages. Representative desktop/mobile, search, version switching, theme, and docs 404 flows were inspected in Phase 27. The root landing is served by `/`; there is no intended physical `/index.html` entry point. See the [internal Phase 27 report](Phase27PublicDocs.md) for the complete v1 route table, v2 source coverage, design, and build/stage/deploy/verify workflow.
 
 The Phase 27C documentation check used the live `php squehub list --raw` registry (**72 commands**) against **73 distinct command tokens** found in public guides. The only non-registry tokens were the working `h` alias for `help` and explicitly unavailable `optimize` references. Forty-six selected configuration names resolved to `.example.env`, current `Config/*.php`, or the two documented opt-in test variables. Twenty representative guide/source/test signature checks covered installation, routing, controllers, Views, validation, Database/Schema/Models, Auth, API, Queue, Scheduler, Redis, Storage, Packages, frontend profiles, Locks, idempotency, Agent, and deployment. The portal verifier checks content structure, local links, route responses, and selected exposed-path protections. These checks do not run every example against every optional backend, and they do not replace a clean release-candidate regression.
 
-For a current Windows working-tree regression, direct `php vendor/bin/phpunit --stop-on-failure` with a temporary `PHPRC` copy of XAMPP `php.ini` omitting a duplicate OpenSSL extension directive passed **2,955 tests, 22,781 assertions, 87 skips, zero failures, and zero errors** in **05:52.719**. The unmodified `composer test` invocation hit its 300-second timeout after the duplicate OpenSSL startup warning disrupted exact-output subprocess tests; no global `php.ini` change was made. This pass is local source validation, not a clean artifact or Linux/backend run. `composer validate --strict` and Python/JavaScript portal syntax checks also passed.
+At the earlier Phase 27 checkpoint, direct `php vendor/bin/phpunit --stop-on-failure` with a temporary `PHPRC` copy of XAMPP `php.ini` omitting a duplicate OpenSSL extension directive passed **2,955 tests, 22,781 assertions, 87 skips, zero failures, and zero errors** in **05:52.719**. The unmodified `composer test` invocation then hit its 300-second timeout after the duplicate OpenSSL startup warning disrupted exact-output subprocess tests; no global `php.ini` change was made. A later current Windows working-tree `composer test` run with command-local `COMPOSER_PROCESS_TIMEOUT=1200` passed **2,959 tests, 22,811 assertions, 87 skips, zero failures, and zero errors** in **05:47.846**. This is local source validation, not a clean artifact or Linux/backend run. `composer validate --strict` and Python/JavaScript portal syntax checks also passed.
 
-This local portal does not establish a public `squehub.com` deployment, a reproducible clean source artifact, a published v2 Composer installation, Linux Apache or cPanel qualification, or release approval. Production publication and artifact/installation proof remain Phase 28 tasks. The historical Phase 26 backend results below retain their own environments and limits; they were not rerun as Phase 27 backend qualification.
+At the Phase 27 checkpoint, the local portal did not establish a public `squehub.com` deployment, a reproducible clean source artifact, a published v2 Composer installation, Linux Apache or cPanel qualification, or release approval. The later Phase 28 initial candidate established clean source checkouts as described above. Production publication and public installation proof remain separate checks. The historical Phase 26 backend results below retain their own environments and limits; they were not rerun as Phase 27 backend qualification.
 
 ## Phase 26 stabilization — complete
 
@@ -194,7 +284,7 @@ These results close Phase 24E within the stated qualification scope. They do not
 
 ### Phase 24 native Linux reproduction procedure
 
-The following procedure remains available to repeat the user-run qualification on a native Linux filesystem, with the Windows working tree at the shown mount. The copied source includes locally ignored `Docs/` and `Tests/`; a normal clone of current `HEAD` cannot reproduce this working tree. Codex did not run these Linux commands.
+The following procedure records how the Phase 24 user-run qualification copied the then-uncommitted working tree to a native Linux filesystem. At that checkpoint `Docs/` and `Tests/` were ignored and a normal clone could not reproduce the source. The Phase 28 candidate now tracks them; prefer its exact-commit clone for a new qualification. Codex did not run the historical commands below.
 
 ```bash
 PHASE24_DIR="$(mktemp -d "$HOME/squehub-phase24.XXXXXX")"
@@ -245,7 +335,7 @@ The user-run native case-sensitive Linux qualification used **PHP 8.5.4**, **Com
 
 ### Phase 25 native Linux repeat procedure
 
-The already passed qualification can be repeated on a native, case-sensitive Linux filesystem. This copies the development working tree, including locally ignored `Docs/` and `Tests/`; it is **not** proof that current `HEAD` reproduces the source. Codex did not run these Linux commands.
+The following commands record the Phase 25 copy-based qualification on a native, case-sensitive Linux filesystem. They copied the then-uncommitted development tree, including ignored `Docs/` and `Tests/`; that run did **not** prove a committed checkout. The Phase 28 candidate now tracks them, so use an exact-commit clone for a new release qualification. Codex did not run the historical commands below.
 
 ```bash
 PHASE25_DIR="$(mktemp -d "$HOME/squehub-phase25.XXXXXX")"
@@ -290,13 +380,13 @@ esac
 unset PHASE25_REAL HOME_REAL PHASE25_DIR
 ```
 
-Phase 11G assessment, reconciled 2026-09-26: **NOT READY — BLOCKERS REMAIN**. This is a record of reported checks on the current development source and disposable copies, not a release announcement. This documentation update did not stage, commit, publish, or deploy anything. The [roadmap](Roadmap.md#phase-11g--production-portability-and-release-assessment) assigns the remaining work.
+Phase 11G assessment, reconciled 2026-09-26: **NOT READY — BLOCKERS REMAIN at that checkpoint**. This is a historical record of reported checks on the then-current development source and disposable copies, not a release announcement. That documentation update did not stage, commit, publish, or deploy anything. The [roadmap](Roadmap.md#phase-11g--production-portability-and-release-assessment) records the later work.
 
-Later Phase 12I checkpoint, 2026-09-27: the Windows working-tree suite passed **1,222 tests, 7,999 assertions, 14 skips**. Standalone PHP SDK generation passed a real local HTTP/Kernel test, and JavaScript passed a local Node/Fetch smoke. TypeScript compilation and Linux/WSL execution for 12I were not run by Codex at that checkpoint. The user later reported that generated clients passed Linux/WSL execution and generated TypeScript compiled; exact later totals and tool versions were not supplied. Phase 12A–12I implementation is present in the working tree, but the release remains **NOT READY**: the source is not reproducible from a clean committed checkout and later release gates remain open. See [client SDK generation](SdkGeneration.md) and the [current feature status](FeatureStatus.md).
+Later Phase 12I checkpoint, 2026-09-27: the Windows working-tree suite passed **1,222 tests, 7,999 assertions, 14 skips**. Standalone PHP SDK generation passed a real local HTTP/Kernel test, and JavaScript passed a local Node/Fetch smoke. TypeScript compilation and Linux/WSL execution for 12I were not run by Codex at that checkpoint. The user later reported that generated clients passed Linux/WSL execution and generated TypeScript compiled; exact later totals and tool versions were not supplied. Phase 12A–12I was **NOT READY at that checkpoint** because its source was not yet reproducible from a clean committed checkout. See the current Phase 28 status above, [client SDK generation](SdkGeneration.md), and [feature status](FeatureStatus.md).
 
-Pre-Phase-15 Database/ORM checkpoint, 2026-09-29: Phase 16A–16E is implemented early in the development working tree. Focused Windows/SQLite tests cover nested relations, polymorphic aliases, cursor pages, lifecycle/observers, transaction retries, and a file-backed SQLite lock conflict. Linux/WSL verification and live MySQL qualification of those then-new paths were **NOT RUN by Codex** at that checkpoint; the Phase 11G evidence below predates them. Later user-reported Linux/SQLite and guarded MySQL checks covered selected Phase 16 paths. The user subsequently reported that the final ORM relation pass also passed Linux/WSL and live MySQL; exact later totals, versions, and database setup details were not supplied. The existing source-reproducibility gate remains open, so this checkpoint is **NOT READY** for a v2 release. See [Database](Database.md), [Models](Models.md), [Relationships](Relationships.md), [Pagination](Pagination.md), and [Migrations](Migrations.md).
+Pre-Phase-15 Database/ORM checkpoint, 2026-09-29: Phase 16A–16E was implemented early in the development working tree. Focused Windows/SQLite tests covered nested relations, polymorphic aliases, cursor pages, lifecycle/observers, transaction retries, and a file-backed SQLite lock conflict. Linux/WSL verification and live MySQL qualification of those then-new paths were **NOT RUN by Codex** at that checkpoint; the Phase 11G evidence below predates them. Later user-reported Linux/SQLite and guarded MySQL checks covered selected Phase 16 paths. The user subsequently reported that the final ORM relation pass also passed Linux/WSL and live MySQL; exact later totals, versions, and database setup details were not supplied. That checkpoint remained **NOT READY** for a v2 release. See the current Phase 28 status above, [Database](Database.md), [Models](Models.md), [Relationships](Relationships.md), [Pagination](Pagination.md), and [Migrations](Migrations.md).
 
-Phase 13L Activation Registry: the user reported successful Linux/WSL verification after its Windows working-tree implementation. Exact later test totals and environment versions were not supplied. This result does not close clean-checkout reproducibility or the wider release gates. See [Activation Registry](ActivationRegistry.md) and [feature status](FeatureStatus.md).
+Phase 13L Activation Registry: the user reported successful Linux/WSL verification after its Windows working-tree implementation. Exact later test totals and environment versions were not supplied. This historical result did not itself close clean-checkout reproducibility or the wider release gates. See [Activation Registry](ActivationRegistry.md) and [feature status](FeatureStatus.md).
 
 Phase 15A development-working-tree checkpoint, 2026-09-30: path-first routes now declare Model lookup explicitly with `->bind('parameter', ModelClass::class, key: 'column')`; omitting `key:` uses the Model primary key. Binding runs only for a matched request that passes route middleware. The original scalar route value remains available through `Request::route()`, while the controller receives the resolved Model. Ordinary Model connection and soft-delete rules apply, and a missing row uses the existing browser/API 404 boundary. No registration or static route inspection performs a framework binding query. On Windows, the PHP 8.2.12 / SQLite 3.39.2 working-tree suite passed **2,279 tests, 15,846 assertions, 62 skips, 0 failures, 0 errors, 0 risky**; focused Phase 15A tests passed **16 tests, 99 assertions**. PHPStan passed for `App/Database` at level 5 and for routing/HTTP at level 3. `composer validate --strict` passed. A locked dependency audit reported a separate low-severity `league/flysystem` advisory, CVE-2026-102601. The user reports that Phase 15A Linux/WSL qualification succeeded; Codex did not run or independently inspect that execution, and exact Linux totals and environment details were not supplied in this report. Source reproducibility and the wider release gates remain open. See [Routing](Routing.md#bind-a-route-parameter-to-a-model) and [Models](Models.md#models-in-route-actions).
 
@@ -329,11 +419,11 @@ The user-run native Linux/WSL qualification used PHP 8.5.4, SQLite 3.46.1, and e
 | 20C Resend/Postmark Mail | Actual SqueHub adapters each passed a guarded live-provider **1 test/1 assertion** run. | Postmark's pending account approval restricted cross-domain sending; its same-domain adapter path passed. No general provider SLA or all-recipient delivery claim. |
 | 20D Memcached Cache | Linux Memcached server 1.6.40 and PHP ext-memcached 3.4.0: **7 tests/14 assertions/1 intentional skip**; isolated namespace, no `flush_all`, service stopped afterward. | Skipped negative-path case required an absent extension and correctly skipped while it was installed. No multi-server guarantee. |
 
-## Supported and verified environments
+## Historical Phase 11G supported and verified environments
 
 Composer declares `php: ^8.2`. The corrected full suite passed on Windows with PHP 8.2.12 and PDO SQLite 3.39.2, and on WSL 2 Ubuntu 26.04.1 with PHP 8.5.4 and SQLite 3.46.1. The Linux snapshot under `/home/val/projects/squehub-v2-releasegate` used a confirmed case-sensitive filesystem. The WSL environment reported kernel 6.18.33.2-microsoft-standard-WSL2, Composer 2.9.5, cURL 8.18.0, OpenSSL 3.5.5, and sodium enabled. These runs prove their stated environments, not every PHP patch release or operating system; macOS remains unverified. A later guarded run used real MySQL 8.4.11/InnoDB on WSL. A separate Windows MariaDB service is not a MySQL qualification result.
 
-The clean working-tree source snapshot was copied outside the repository without `.git`, `.env`, `vendor`, or root runtime `Storage`. It retained `App/Storage`, which is framework source. Composer installed 109 locked packages anew. After the focused Linux portability fix was synchronized, the corrected WSL suite passed **725 tests, 4,886 assertions, 7 skips, 0 failures, 0 errors, 0 risky**; the active Windows tree passed **725 tests, 4,879 assertions, 9 skips, 0 failures, 0 errors, 0 risky**. Different platform capabilities explain the skip and assertion differences. The active development tree's `vendor` directory was not used for the Linux snapshot. A fresh committed checkout cannot reproduce this v2 implementation: current `HEAD` contains only 80 files, while essential v2 source and `composer.lock` remain untracked.
+The clean working-tree source snapshot was copied outside the repository without `.git`, `.env`, `vendor`, or root runtime `Storage`. It retained `App/Storage`, which is framework source. Composer installed 109 locked packages anew. After the focused Linux portability fix was synchronized, the corrected WSL suite passed **725 tests, 4,886 assertions, 7 skips, 0 failures, 0 errors, 0 risky**; the active Windows tree passed **725 tests, 4,879 assertions, 9 skips, 0 failures, 0 errors, 0 risky**. Different platform capabilities explain the skip and assertion differences. The active development tree's `vendor` directory was not used for the Linux snapshot. At this earlier checkpoint, a fresh committed checkout could not reproduce v2: `HEAD` contained only 80 files and essential source and `composer.lock` were untracked. Phase 28's local candidate commit changes that source-state assessment.
 
 | Capability | Result | Evidence and limit |
 | --- | --- | --- |
@@ -357,7 +447,7 @@ The clean working-tree source snapshot was copied outside the repository without
 | Doctor | PASS | Windows disposable profile: 13 passes, one optional Mail warning, one optional Redis skip. Linux disposable SQLite profile: 11 passes, three optional/setup warnings, one Redis skip; missing `.env` correctly failed. |
 | Health endpoints | PASS | Real HTTP: `/health/live` 200, `/health/ready` 200; broken required DB readiness 503. JSON and `no-store` observed. |
 | Clean source snapshot | PASS | Fresh locked Composer install, optimized autoload, full suite and CLI; this is separate from a clean committed checkout. |
-| Clean committed checkout | BLOCKER | Required v2 code is absent from `HEAD`. |
+| Clean committed checkout at Phase 11G | BLOCKER THEN | Required v2 code was absent from `HEAD` at that checkpoint; see Phase 28 above. |
 | Fresh application smoke | PASS with limits | Disposable current-source project exercised route, view, database, migration, Model, validation, configured Auth, Cache, Session, Rate Limit, Storage, Crypt, Array Mail, Array Notification, local HTTP Client, database Queue, worker, Scheduler, Doctor, Health, and the Redis gateway without a live connection. This was not a published `create-project` install. |
 
 After the live MySQL/Redis tests and environment cleanup, the normal Linux suite returned to **725 tests, 4,886 assertions, 7 skips, 0 failures, 0 errors, 0 risky**. Live service results did not alter the default local test path.
@@ -395,13 +485,13 @@ git diff --check
 
 Run destructive migrations and worker execution only against a disposable application database. Use the existing guarded MySQL opt-in suite only with its designated empty `squehub_test_*` database. Do not point it at ordinary application `DB_*` values. For Redis, use an isolated test server and namespace and record server version, client, authentication, and TLS mode without printing credentials. Check real process boundaries, not only in-process unit tests.
 
-## Packaging and release blockers
+## Initial Phase 28 packaging and release assessment
 
-1. **Required source is uncommitted.** The working tree has hundreds of untracked files; a normal clone of current `HEAD` lacks key `App`, `Bootstrap`, `Config`, and `Project` v2 files and `composer.lock`. A passing working tree or copied snapshot cannot fix this.
-2. **The v2 Git ignore policy has been corrected, but the exact candidate is not yet qualified.** `Docs/`, `Tests/`, and `phpunit.xml.dist` are candidate release source. Generated portal output, private `phpunit.xml`, `.env`, dependencies, and runtime data remain excluded. Confirm their presence and behavior in a fresh checkout of the release commit before claiming reproducibility.
-3. **Some optional integrations still need scoped qualification.** Guarded MySQL, PhpRedis, Phase 20 S3-compatible MinIO, Memcached, Resend, and Postmark adapter paths passed within their documented limits. Predis live execution, Redis authentication/TLS, successful SMTP TLS, AWS S3 itself, Postmark cross-domain sending pending provider-account approval, controlled HTTPS, macOS, Linux Apache, and real shared-host/cPanel URL-subdirectory deployment have no equivalent pass. Phase 15E's isolated Windows Apache smoke covers a bounded `/app/` profile, not every production mapping or feature path. Decide which claims are required for the first release and test each claimed profile explicitly.
+1. **Final artifact qualification was not established by `fc62a13`.** The initial local release commit tracks the required v2 source, `Docs/`, `Tests/`, and lock file, and native Linux clean-checkout qualification passed. A Windows checkout exposed one line-ending-sensitive test fixture; the focused correction and subsequent documentation edits belong to a later commit and need results from that exact commit.
+2. **Public distribution was not proven at this checkpoint.** The local VCS `composer create-project` path passed, but no public v2 tag or indexed Packagist version was available, and production `/docs/v2.x` was unavailable. The local XAMPP documentation portal was a staging result. GitHub CI had not run for this candidate.
+3. **Optional integrations had bounded qualification.** The isolated Phase 28 MySQL and PhpRedis checks passed, as did earlier guarded S3-compatible MinIO, Memcached, Resend, and Postmark adapter paths within their documented limits. Predis live execution, Redis authentication/TLS, successful SMTP TLS, AWS S3 itself, Postmark cross-domain sending pending provider-account approval, controlled HTTPS, macOS, Linux Apache, and real shared-host/cPanel URL-subdirectory deployment had no equivalent pass. Phase 15E's isolated Windows Apache smoke covered a bounded `/app/` profile, not every production mapping or feature path. Decide which claims are required for the first release and test each claimed profile explicitly.
 
-The release gate remains closed until the intended source is represented in a reproducible distribution and the claimed supported environments pass. Resend and Postmark passed guarded provider-adapter tests, but broader external delivery topologies, Redis TLS/auth, macOS, and successful STARTTLS/SMTPS remain explicit verification gaps. They should be described accurately even if a narrower initial release scope is chosen. Phase 13A's five code generators are implemented in this development working tree; that does not establish a published v2 distribution or qualify Linux execution for those generators. See [Generators](Generators.md).
+This initial assessment did not close the release gate. Use the [final candidate verification record](#final-candidate-verification-record) above for the latest exact-commit results and release decision. Broader external delivery topologies, Redis TLS/auth, macOS, and successful STARTTLS/SMTPS require separate claims and evidence if included in the first release scope. See [Generators](Generators.md) for the implemented generator set and its own limits.
 
 ## Compatibility fix found during verification
 

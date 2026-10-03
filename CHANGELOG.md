@@ -1,8 +1,8 @@
 # Changelog
 
-This file summarizes developer-facing changes. The [v1 to v2 upgrade guide](Docs/V2.x/UpgradeFromV1.md) covers migration details.
+This file summarizes developer-facing changes. The [v1 to v2 upgrade guide](https://www.squehub.com/docs/v2.x/upgrade-from-v1) covers migration details.
 
-## 2.0.0 — unreleased
+## 2.0.0
 
 ### Application foundation
 
@@ -16,7 +16,7 @@ This file summarizes developer-facing changes. The [v1 to v2 upgrade guide](Docs
 - Cache, Redis integration, Storage, Mail, Notifications, HTTP Client, cryptography, Events, Queue, Scheduler, broadcasting, and webhooks with their documented drivers and limits.
 - Packages and Kits with explicit activation and reviewable changes; CLI generators, SqueHub Setup, SqueHub Dev, diagnostics, Health and Doctor, and local read-only SqueHub Studio.
 - Optional frontend profiles for Vite, React, and Vue; typed application data, reliability primitives, deployment and project-bundle tools, and bounded local Agent/MCP integration.
-- Versioned v2 guides and an upgrade path from v1.x. Publication and clean-install proof remain release gates.
+- Versioned v2 guides and an upgrade path from v1.x.
 
 ### Breaking changes from v1.x
 
@@ -27,4 +27,4 @@ This file summarizes developer-facing changes. The [v1 to v2 upgrade guide](Docs
 - Packages and Kits have explicit lifecycle and activation rules. Existing v1 Package layout and automatic loading need review before migration.
 - Copy `.example.env` to `.env`, generate a private `APP_KEY`, and review configuration and CLI command changes before serving or migrating an application.
 
-See [Installation](Docs/V2.x/Installation.md), [Upgrade from v1.x](Docs/V2.x/UpgradeFromV1.md), and [Feature status](Docs/V2.x/FeatureStatus.md) for exact supported contracts and qualification boundaries.
+See [Installation](https://www.squehub.com/docs/v2.x/installation), [Upgrade from v1.x](https://www.squehub.com/docs/v2.x/upgrade-from-v1), and [v2 status](https://www.squehub.com/docs/v2.x/status) for exact supported contracts and qualification boundaries.

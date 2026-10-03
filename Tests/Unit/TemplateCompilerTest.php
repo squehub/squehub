@@ -88,10 +88,10 @@ TEMPLATE;
 
     public function testHtmlCommentsAlsoSuppressRawPhpAcrossLexerTokens(): void
     {
-        $source = <<<'TEMPLATE'
-before<!-- @include('Fake') <?php echo 'not rendered'; ?>
-{{ $hidden }} -->after
-TEMPLATE;
+        $source = implode("\n", [
+            "before<!-- @include('Fake') <?php echo 'not rendered'; ?>",
+            '{{ $hidden }} -->after',
+        ]);
 
         self::assertSame("before\nafter", $this->compile($source));
     }

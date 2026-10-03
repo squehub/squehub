@@ -2,6 +2,128 @@
 
 A SqueHub Package is a reusable runtime capability under `Project/Packages/<PackageName>/`. Small applications can continue using ordinary `Project/` classes. [Large applications](LargeApplications.md) can introduce Package boundaries gradually; Packages are never required for ordinary controllers, routes, models, or views. [SqueHub Kits](Kits.md) compose broader application solutions in a separate lifecycle. `App\Plugins` is the framework API gateway, not a Package or Kit installation location.
 
+## Installing Packages from an explicit source
+
+```bash
+php squehub package:install <source>
+```
+
+`<source>` identifies the Package definition you chose. SqueHub does not require Packagist discovery, a SqueHub Package registry, or a central Package account to install it. A website catalog can help you **discover** a Package and copy its supported source; discovery and installation are separate. Official, community, organization-private, and local development Packages follow the same review and activation lifecycle when supplied through a currently supported source. See [Kits](Kits.md#installing-kits-from-an-explicit-source) for the different Kit source boundary.
+
+```text
+developer supplies source
+  -> SqueHub inspects a local tree or checks out an HTTPS Git repository
+  -> static entry and optional composer.json inspection
+  -> dependency, path, ownership, and Change Plan checks
+  -> reviewed install into Project/Packages/<Name>/
+  -> installed disabled
+  -> inspect source and state; deliberately enable and verify
+```
+
+The current source resolver in `App\Packages\PackageManager::prepareSource()` accepts a physical local directory or a credential-free HTTPS Git repository URL. It has **no archive downloader or extractor**. The Package name comes from the local directory basename or the URL's last path component (with an optional `.git` suffix removed). That name must be an exact capitalized PHP identifier such as `Media`, and its root entry must be `Media.php` with a matching class. A repository with a lowercase last component such as `/media` cannot be installed directly through the present Git resolver, even if its contents use `Media` internally.
+
+| Source form | Example | Current status | Use |
+| --- | --- | --- | --- |
+| Physical local directory | `./Media` or `D:\Packages\Media` | Supported | Local development, downloaded and inspected source, private source already available locally |
+| Local ZIP/archive | `./Media-1.0.0.zip` | Unsupported | Extract and review into a correctly named `Media` directory first |
+| HTTP(S) archive | `https://example.test/Media.zip` | Unsupported | Download and extract outside this installer, then use a local directory |
+| GitHub release ZIP URL | `https://github.com/squehub/media/releases/download/v1.0.0/squehub-media-1.0.0.zip` | Unsupported; illustrative planned release | A release asset URL is an archive, not a Git repository source |
+| GitHub repository URL | `https://github.com/acme/Media` | Supported by the HTTPS Git code path when the repository exists and has a matching `Media` root; live network success is not qualified by the current tests | Explicit repository checkout; this example is illustrative |
+| HTTPS Git URL with `.git` | `https://git.example.test/team/Media.git` | Supported by the same Git code path, subject to a reachable repository and matching `Media` root | Explicit Git checkout; this example is illustrative |
+| Git tag or branch selector | `?ref=v1.0.0`, `#v1.0.0`, or a version constraint | Unsupported | The installer has no ref argument or constraint resolver |
+| `file://` URL | `file:///path/to/Media` | Unsupported | Pass the physical directory path instead |
+| Authenticated/private remote URL | URL credentials, token query, or interactive Git prompt | Unsupported | Make the source available as a reviewed local directory |
+
+The HTTPS Git path performs a shallow, single-branch clone of the remote's default branch into a disposable system temporary directory, with submodules disabled and an empty Git hooks directory. It does not run Composer scripts. It then inspects the checkout and copies reviewed files; `.git` is omitted from the installed Package. Preview can therefore contact the remote and create temporary checkout files, while leaving application Package files and state unchanged. Git must be installed for this path. The source URL must use HTTPS and have no user information, query string, or fragment. The CLI disables interactive Git prompts; authenticated private remotes are not handled by this installer. The current suite proves rejected credential-bearing URLs and local installation, but does not include a successful live Git-host clone, so qualify repository-host behavior in your environment before relying on it.
+
+### Local installation and deliberate activation
+
+Prepare a valid `Media/` directory outside the destination `Project/Packages/Media/`, review its PHP, then run:
+
+```bash
+php squehub package:install "./Media" --preview
+php squehub package:install "./Media" --yes
+php squehub package:inspect Media
+php squehub package:list
+php squehub package:enable Media --preview
+php squehub package:enable Media --yes
+php squehub package:verify Media
+```
+
+The same physical directory form works on Windows, for example `php squehub package:install "D:\Packages\Media" --preview`. The path may be outside the application root, but it must resolve to an ordinary, readable directory; linked or reparsed source entries are rejected. `--preview` displays the plan and applies nothing to the application. In a non-interactive shell, `--yes` is required to apply; a real interactive terminal can confirm the plan. `package:inspect` and `package:list` are static and do not include Package PHP. Enable permits the entry and enabled contributions to execute on later application boot. `package:verify` requires an enabled Package and deliberately boots enabled Package definitions, loads route and Scheduler definitions, and refreshes the contribution snapshot. It does not execute a route handler, render a View, or run a scheduled task. Review source before enabling or verifying.
+
+**Installation is not activation or trust.** A managed install records ownership and installs the Package disabled by default. A manually copied Package is also discovered disabled, but lacks managed source ownership, so its source cannot be upgraded or removed through the managed lifecycle. Verification is separate from enabling: it records observed contributions after a trusted boot. Inspect the [contribution snapshot](Contributions.md) after verification.
+
+### Repository sources, versions, and official examples
+
+An HTTPS Git repository URL is a checkout source, not a request for a ZIP or a release asset. It follows the remote default branch at the time of each plan and apply; that branch can move, and there is no `--ref`, tag, branch, or version-constraint selector. Preview and apply clone again and compare fingerprints, so a change between them blocks a stale plan. For a production deployment that needs a specific revision, obtain and review that revision as a local `Media/` directory under your own release process, then install or upgrade from that directory. Record the upstream commit or archive digest outside SqueHub: the installer stores a safe source label and file fingerprints, not a Git commit pin or a verified archive checksum. Package `composer.json` version is display metadata, not a dependency or release constraint resolver.
+
+The official organization is [`squehub`](https://github.com/squehub). `squehub/media` is a **planned illustrative** official Package repository in this guide, not a live installation instruction. Its lowercase `/media` path also fails the current Package URL identity rule. A future official release URL such as `https://github.com/squehub/media/releases/download/v1.0.0/squehub-media-1.0.0.zip` is an illustrative archive address only: `package:install` cannot consume it today. Likewise, a neutral community URL such as `https://github.com/acme/Media` is only a source-format example; the repository must exist, be reachable, and contain a valid `Media` Package before installation succeeds. An **Official** designation should be used only for real SqueHub-owned releases; other authors can distribute from their own supported sources without a registry.
+
+To change a managed Package from another explicit source, keep the source directory basename and Package identity exactly the same. For example, put the next version under `./releases/v2/Media`:
+
+```bash
+php squehub package:upgrade Media "./releases/v2/Media" --preview
+php squehub package:upgrade Media "./releases/v2/Media" --yes
+php squehub package:verify Media
+```
+
+An upgrade checks the new source, current ownership fingerprints, dependencies, and reviewed plan before replacing the installed tree. Modified owned files, stale plans, mismatched identity, or dependent conflicts block the change. A changed Package source makes an earlier contribution snapshot stale, so verify again after a trusted enabled upgrade. `package:disable Media --yes` stops Package activation without deleting source; `package:remove Media --preview` and `package:remove Media --yes` remove only safely owned managed source after dependency and fingerprint checks. Package removal does not roll back Migrations or application data.
+
+### Package source layout and metadata
+
+The required manifest-like identity is the source directory plus its same-named PHP entry; **there is no required `squehub.package.json` file**. For example, a minimal valid source is:
+
+```text
+Media/
+└── Media.php
+```
+
+```php
+<?php
+
+namespace Packages\Media;
+
+use App\Plugins\ServiceProvider;
+
+final class Media extends ServiceProvider
+{
+}
+```
+
+An optional root `composer.json` supplies metadata that SqueHub reads statically:
+
+```json
+{
+  "name": "example/media",
+  "version": "1.0.0",
+  "extra": {
+    "squehub": {
+      "name": "Media",
+      "owner": "Media Team",
+      "requires": []
+    }
+  }
+}
+```
+
+`extra.squehub.name`, when present, must match the directory identity. `extra.squehub.owner` is an optional display label, not an authorization grant. `extra.squehub.requires` is an optional list of exact Package names, not Composer version constraints. `version` is optional bounded text; SqueHub does **not** enforce SemVer or resolve version ranges for Packages. Routes, Views, Assets, and Scheduler definitions are convention-based optional directories described below, not `composer.json` manifest arrays. There is no installer field for ownership or contribution metadata: SqueHub records owned file fingerprints and observes runtime contributions through its activation/provenance registries.
+
+### Source safety and troubleshooting
+
+The installer validates canonical names and the Package entry, inspects metadata without including PHP, rejects linked/reparsed or nonportable source entries and case-colliding filenames, fingerprints reviewed files, and rechecks them while staging. The plan exposes conflicts before application. Ownership checks protect managed upgrades and removal from overwriting or deleting changed files. These checks reduce accidental and unreviewed changes; **third-party PHP is still third-party code**. SqueHub does not make malicious Package PHP safe. Review its entry, routes, definitions, and dependencies before activation.
+
+| Symptom | Current cause or next check |
+| --- | --- |
+| `Local Package source is unavailable.` | The path does not resolve to a directory. Extract an archive first if needed. |
+| `Package name must be an exact, capitalized PHP identifier.` | The source basename is invalid, commonly a lowercase repository slug or `.zip` filename. |
+| `Expected Package entry file is missing.` | Put `<Name>.php` at the source root with the matching namespace/class. |
+| `Package metadata is invalid JSON.` | Correct the optional root `composer.json`. |
+| `Git Package source must be a credential-free HTTPS URL.` | Remove URL credentials, query, or fragment; use a local directory for private source. |
+| `Git Package source could not be inspected.` | Check Git availability, network access, repository reachability, and clone permission. |
+| `Package name already exists or conflicts by casing.` | Use `package:upgrade <Name> <source>` for a managed installed Package. |
+| A plan has conflicts | Resolve ownership, dependency, unsafe-path, or changed-file issues and preview again. |
+
 ## Structure and public API
 
 ```text

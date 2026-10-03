@@ -37,6 +37,34 @@ final class KitFilesystemSafetyTest extends TestCase
         }
     }
 
+    public function testArchiveAndRemoteSourcesAreNotKitInstallSources(): void
+    {
+        $project = new TemporaryProject();
+        $sources = new TemporaryProject();
+        try {
+            $sources->write('AppStarter.zip', 'not a Kit directory');
+            $manager = (new Application($project->path()))->container()->make(KitManager::class);
+            foreach ([
+                $sources->path('AppStarter.zip'),
+                'file:///AppStarter',
+                'https://example.test/AppStarter.zip',
+                'https://github.com/squehub/app-starter/releases/download/v1.0.0/squehub-app-starter-1.0.0.zip',
+                'https://github.com/squehub/app-starter',
+                'https://git.example.test/team/AppStarter.git',
+            ] as $source) {
+                try {
+                    $manager->planInstall($source);
+                    self::fail('Unsupported Kit source form was accepted: ' . $source);
+                } catch (KitException) {
+                    self::assertDirectoryDoesNotExist($project->path('Project/Kits/AppStarter'));
+                }
+            }
+        } finally {
+            $sources->remove();
+            $project->remove();
+        }
+    }
+
     public function testLinkedSourceEntryIsRejectedBeforeInstallation(): void
     {
         $project = new TemporaryProject();

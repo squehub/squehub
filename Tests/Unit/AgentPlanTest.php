@@ -30,7 +30,7 @@ final class AgentPlanTest extends TestCase
             self::assertSame('migrate:plan', $first['plan']['operation']);
             self::assertSame('agent', $first['plan']['metadata']['source']);
             self::assertSame('agent', $first['provenance']['source']);
-            self::assertSame('2.0.0-dev', $first['provenance']['framework_version']);
+            self::assertSame('2.0.0', $first['provenance']['framework_version']);
             self::assertFalse($first['applied']);
             self::assertFalse($first['apply_supported']);
             self::assertSame($source, $first['plan']['actions'][0]['subject']);

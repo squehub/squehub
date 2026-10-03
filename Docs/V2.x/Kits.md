@@ -2,7 +2,99 @@
 
 SqueHub Kits compose an application solution from reusable [Packages](Packages.md) and ordinary application files. **Packages build capabilities. Kits build solutions.** A Package can contribute runtime services, routes, and views while enabled; a Kit is a deliberately managed definition that may publish controllers, routes, views, configuration, assets, Migrations, and Seeders into their normal application locations. An enabled Kit is not a second per-request Package runtime.
 
-This guide describes the v2.0.0 development working tree, not a published stable release. Review a Kit's source before installing or applying it: a manifest and a Change Plan make framework-managed file effects visible, but neither sandboxes executable Kit or generated application PHP.
+This guide describes the v2.0.0 Kit lifecycle. Review a Kit's source before installing or applying it: a manifest and a Change Plan make framework-managed file effects visible, but neither sandboxes executable Kit or generated application PHP.
+
+## Installing Kits from an explicit source
+
+```bash
+php squehub kit:install <source>
+```
+
+`<source>` is an explicit Kit definition directory supplied by the developer. Installing does not require a SqueHub Kit registry, a central account, or Packagist discovery. A future website catalog can help developers find official or community Kits and copy a supported source; discovery and installation are separate. Local private organization source follows the same lifecycle. The source boundary for Kits is narrower than for [Packages](Packages.md#installing-packages-from-an-explicit-source): `App\Kits\KitManager::localSource()` currently accepts only an ordinary local directory.
+
+```text
+developer supplies local Kit directory
+  -> SqueHub inspects kit.json, the entry shape, and source files
+  -> source-path and definition Change Plan checks
+  -> reviewed install of the definition into Project/Kits/<Name>/
+  -> installed disabled; no application files published
+  -> enable plan checks required Packages, mapped files, target ownership, and conflicts
+  -> inspect state and planned composition; deliberately enable
+```
+
+The last step is important: applying a Kit install or another lifecycle action **can execute declared Kit hooks** from reviewed source. Static inspection and `--preview` do not execute them. A disabled installed Kit does not publish its `files` mappings or run as a per-request Package. Installing the definition is therefore distinct from enabling its composition, but approval of an install is still a trust decision when the manifest declares install hooks.
+
+| Source form | Example | Current status | Use |
+| --- | --- | --- | --- |
+| Physical local directory | `./AppStarter` or `D:\Kits\AppStarter` | Supported | Local development, inspected downloaded source, private source already local |
+| Local ZIP/archive | `./AppStarter-1.0.0.zip` | Unsupported | Extract and review into an `AppStarter` directory first |
+| HTTP(S) archive | `https://example.test/AppStarter.zip` | Unsupported | Download and extract outside the installer, then use a local directory |
+| GitHub release ZIP URL | `https://github.com/squehub/app-starter/releases/download/v1.0.0/squehub-app-starter-1.0.0.zip` | Unsupported; illustrative planned release | Archive extraction is outside the Kit installer |
+| GitHub repository URL | `https://github.com/acme/AppStarter` | Unsupported | Obtain the repository as a local, correctly named directory first |
+| HTTPS Git URL, tag, or branch | `https://git.example.test/team/AppStarter.git` | Unsupported | Kit has no Git clone or ref selector |
+| `file://` URL | `file:///path/to/AppStarter` | Unsupported | Pass a physical directory path |
+| Authenticated/private remote URL | Token, credentials, or private HTTPS source | Unsupported | Make the source available through a reviewed local directory |
+
+This installer does not download, redirect, extract, validate archive entries, check archive checksums, or resolve Git refs. Those concerns belong to the external acquisition step when using an archive or repository. Do not pass an archive URL or ZIP file to `kit:install` and expect extraction. The source directory basename must be an exact capitalized Kit identifier matching `kit.json` and `<Name>.php`; linked/reparsed or nonportable source trees are rejected.
+
+### Local installation, inspection, and activation
+
+For a valid `AppStarter/` source outside the destination `Project/Kits/AppStarter/`:
+
+```bash
+php squehub kit:install "./AppStarter" --preview
+php squehub kit:install "./AppStarter" --yes
+php squehub kit:inspect AppStarter
+php squehub kit:list
+php squehub kit:enable AppStarter --preview
+php squehub kit:enable AppStarter --yes
+```
+
+On Windows, a physical path such as `php squehub kit:install "D:\Kits\AppStarter" --preview` is also accepted. `--preview` leaves application files, activation state, and hooks untouched. Applying with `--yes` is the non-interactive route; a real interactive terminal can confirm the plan. Inspect the `kit:enable` plan for required Package activation, target collisions, generated files, and hook warnings before applying. The Kit has no `kit:verify` command. Test the resulting ordinary application routes, classes, and views with your application's tests after enable.
+
+For a managed upgrade, stage a new definition in another parent while retaining the exact `AppStarter` basename:
+
+```bash
+php squehub kit:upgrade AppStarter "./releases/v2/AppStarter" --preview
+php squehub kit:upgrade AppStarter "./releases/v2/AppStarter" --yes
+php squehub kit:inspect AppStarter
+```
+
+The preview compares the old definition and published-file fingerprints with the new explicit source and reviews Package requirements, collisions, and hooks. A disabled Kit upgrades its definition but leaves prior published application files until a later reviewed enable. `kit:disable AppStarter --yes` stops Kit activation state without removing files it already published; ordinary routes and other application files can still run. `kit:remove AppStarter --preview` and `kit:remove AppStarter --yes` attempt to remove safely owned definition and published files. Modified or unowned files block removal; Kit-owned Migrations are preserved and block their replacement or removal rather than guessing database history. Disabling or removing a Kit does not automatically disable required Packages or roll back data.
+
+### Versions, official sources, and private Kits
+
+The `version` in `kit.json` must use the bounded `major.minor.patch` form, optionally with a prerelease suffix. It describes the Kit definition; SqueHub has no remote version-constraint resolver. Choose and acquire a specific source revision yourself, then present its extracted local directory to `kit:install` or `kit:upgrade`. Keep any upstream commit or archive digest in your release records; SqueHub fingerprints owned files but does not verify an external archive checksum.
+
+The official organization is [`squehub`](https://github.com/squehub). `squehub/app-starter` and a future URL such as `https://github.com/squehub/app-starter/releases/download/v1.0.0/squehub-app-starter-1.0.0.zip` are **planned illustrative** examples here, not live Kit installation commands. Even after a release exists, the current Kit installer needs a reviewed local `AppStarter/` directory. Treat an **Official** designation as appropriate only for a real SqueHub-owned Kit; independently hosted community Kits can use the same local source lifecycle. Authenticated remote fetching is outside the Kit installer. Acquire a private Kit through your organization's normal authenticated process, review it locally, and pass its physical directory path; do not put tokens in command-line URLs.
+
+### Source safety and troubleshooting
+
+Static inspection reads a bounded `kit.json` and checks the expected entry shape without including Kit PHP. Source and destination checks reject traversal, absolute or drive paths in mappings, linked/reparsed entries, case collisions, unsupported application targets, stale fingerprints, and ownership conflicts. There is no Kit archive extractor, so archive traversal protection is not an installation feature. These checks protect framework-managed file operations; **third-party Kit hooks and published PHP remain executable code**. Review both before applying an install or enable plan. See [Security](Security.md) and [reviewable changes](ReviewableChanges.md).
+
+| Symptom | Current cause or next check |
+| --- | --- |
+| `Kit source must be a safe local directory.` | Pass a physical directory path, not a URL or linked source. |
+| `Local Kit source is unavailable.` | Check that the directory exists and is readable; extract archives first. |
+| `Kit name must be an exact, capitalized PHP identifier.` | Use a matching capitalized source basename, `kit.json` name, and entry. |
+| `Kit manifest is missing, too large, or unavailable.` | Put a readable `kit.json` at the source root. |
+| `Kit manifest fields are invalid.` | Use only required `format`, `name`, `version` and optional `requires`, `files`, `hooks`. |
+| `Kit file mapping targets an unsupported application location.` | Review the strict target allowlist below. |
+| A plan has conflicts | Resolve target ownership, modified files, Package requirements, or unsafe paths and preview again. |
+
+### Kit and Package roles
+
+| | Package | Kit |
+| --- | --- | --- |
+| Purpose | Reusable runtime capability | Application composition and starter structure |
+| Installed source | `Project/Packages/<Name>/` | `Project/Kits/<Name>/` definition |
+| Main effect after enable | Entry and enabled contributions participate in application boot | Reviewed files are published into normal application locations; no per-request Kit entry |
+| Manifest | Same-named PHP entry; optional `composer.json` metadata | Required strict `kit.json` plus same-named Kit entry |
+| Source forms today | Local directory or credential-free HTTPS Git checkout | Local directory only |
+| Ownership | Managed Package source files and contribution snapshot | Managed Kit definition and published application files |
+| Upgrade | Explicit replacement source with Package ownership checks | Explicit local replacement with definition, published-file, and conflict checks |
+
+A Package adds a capability such as Media; a Kit composes application files and may require Packages. Kit-to-Package requirements are explicit. A Package cannot require a Kit.
 
 ## Definition and application files
 
@@ -44,6 +136,17 @@ Project/Kits/Ecommerce/
 ```
 
 `format` describes the manifest format and is currently `1`; `version` is the Kit release identifier, not that format. Versions use a bounded `major.minor.patch` spelling with an optional prerelease suffix. `requires`, `files`, and `hooks` may be empty or omitted. Manifest fields are strict: an unknown field, duplicate or case-colliding source/target, invalid path, unsupported target, oversized manifest, or invalid Kit identity is an error. Requirements use exact Package names, and `files` are explicit source-to-target mappings. Template sources can publish application classes, routes, views, Migrations, Seeders, and tests; `Config/` sources target `Config/` PHP files, and `Assets/` sources target the Kit's own `public/assets/Kits/<KitName>/` namespace. The manifest carries paths and metadata, never secret values.
+
+The current `files` mapping allowlist is precise:
+
+| Source prefix | Supported target |
+| --- | --- |
+| `Templates/` | Files below `Project/Controllers/`, `Project/Middleware/`, `Project/Models/`, `Project/Routes/`, `Project/Views/`, `Project/Scheduler/`, `Project/Validation/`, `Project/Api/`, `Project/Services/`, or `Project/Utils/` |
+| `Templates/` | PHP files under `Database/Migrations/`, `Database/Seeders/`, or `Tests/` |
+| `Config/` | `Config/<Name>.php` |
+| `Assets/` | An allowed static asset extension under `public/assets/Kits/<KitName>/` |
+
+Targets are application-relative slash paths, never absolute or traversal paths. Mapping collisions and modified files are conflicts, not merge requests. `kit.json` does not contain file ownership hashes or conflict operations: the lifecycle records fingerprints and derives those plan actions from actual source and target state. Published file bytes are bounded during apply. There is no implicit scan that publishes every file under `Templates/`, `Config/`, or `Assets/`; only listed mappings are published.
 
 Publication copies the declared files to the reviewed destination. A Config mapping does not merge into an existing configuration file; a collision must be resolved first. Assets are static files under the public Kit namespace, not a frontend build pipeline. Publishing them does not require Node.js. Template mapping in this phase does not invent application names, business rules, or a general template language.
 

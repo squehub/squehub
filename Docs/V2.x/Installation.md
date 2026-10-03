@@ -1,6 +1,6 @@
-# Install the SqueHub v2.0.0 development source
+# Install SqueHub v2.0.0
 
-SqueHub v2.0.0 is under development. The published `composer create-project squehub/squehub` package and the [v1.x website guide](https://squehub.com/docs/v1.x) do not install this working-tree version. Use a copy of the intended v2 source and run `composer install` at its root. Do not deploy an unreviewed development checkout as a production release.
+These steps use a complete SqueHub v2.0.0 source tree. Select an exact v2 ref or matching archive and verify its contents before installing dependencies. An unversioned repository checkout or Composer package resolution can select a different generation; the [v1.x guide](https://squehub.com/docs/v1.x) remains available for v1 applications.
 
 ## Install Composer
 
@@ -15,34 +15,26 @@ composer --version
 
 If Composer was installed locally as `composer.phar`, use `php composer.phar` in place of `composer` in the commands below.
 
-## Obtain a project: three intended v2 paths
+## Obtain the v2 source
 
-Composer create-project, Git, and a ZIP archive are the intended ways to obtain SqueHub v2 when its release artifact is available. **Today these paths resolve to the current published/default generation, not this unreleased v2 working tree.** Use the separate development-source instructions below for this milestone. Do not use a current clone or download as evidence that v2.0.0 has shipped.
+Obtain an exact, verified v2 ref from an authorized source repository or a matching complete archive. Keep `composer.lock`, `Docs/`, `Tests/`, and `phpunit.xml.dist` with the application source. For a Git ref, use its actual URL and ref name:
 
-### Composer create-project
+```bash
+git clone --branch <verified-v2-ref> --single-branch <v2-source-url-or-path> my-app
+cd my-app
+git rev-parse HEAD
+```
+
+Match the full commit ID to the release or source record you selected. For an archive, verify that it identifies the same release and contains the complete source tree. Use `composer install` with the distributed lock file, not `composer update`, to install its recorded dependencies.
+
+The unversioned commands below do not pin v2.0.0:
 
 ```bash
 composer create-project squehub/squehub my-app
-cd my-app
-```
-
-### Git clone
-
-```bash
 git clone https://github.com/squehub/squehub.git my-app
-cd my-app
-composer install
 ```
 
-The [official SqueHub repository](https://github.com/squehub/squehub) currently opens on its default branch. For a future v2 installation, select the published v2 release reference once one exists; the command above alone does not pin a v2 version.
-
-### ZIP download
-
-Open the [official SqueHub repository](https://github.com/squehub/squehub), choose **Code → Download ZIP**, extract it into your intended project directory, then run `composer install` from that directory. For a future v2 installation, download the published v2 release archive rather than a default-branch ZIP. Check the extracted version before use.
-
-## Work on the v2 development source
-
-For this v2.0.0 release-candidate source, obtain an authorized **complete v2 source snapshot** and run `composer install` at its root. The current Git `HEAD` still points to the historical generation while the candidate is being assembled. Required `Docs/`, `Tests/`, and `phpunit.xml.dist` files are now included by the v2 Git ignore policy; only an exact candidate commit and a fresh checkout can prove the final distribution. The published Composer package and GitHub default branch must not be described as installing v2 until release publication and installation proof succeed.
+Likewise, **Code → Download ZIP** on the [public repository](https://github.com/squehub/squehub) downloads its default branch. For a v2 installation, select an explicit v2 ref or Composer version and verify that the downloaded package contains the v2 source. The steps below apply to the verified source checkout or archive.
 
 ## Requirements
 
@@ -57,18 +49,18 @@ Redis, SMTP, a Queue worker, and an OS scheduler are optional until the applicat
 
 ## Install dependencies
 
-From a copy of the v2 source:
+From the complete v2 source selected above (or its matching archive):
 
 ```bash
 composer install
 composer validate --strict
 ```
 
-Keep `composer.lock` with the source snapshot used for this candidate. Until the exact candidate commit is qualified and published, a clone of the repository's current default branch does not install v2; see [Feature status](FeatureStatus.md).
+Keep `composer.lock` with that source. Check the selected ref when cloning a repository default branch; it is not pinned to v2.0.0 by the command alone.
 
 ## Configure the environment
 
-There are two supported paths in this development working tree. **Option A** is the complete manual path. **Option B** uses the optional [SqueHub Setup](Setup.md) command to inspect and propose configuration changes. Neither path changes the fact that the published Composer package is still the v1 generation.
+There are two setup paths. **Option A** is the complete manual path. **Option B** uses the optional [SqueHub Setup](Setup.md) command to inspect and propose configuration changes. Both start from the verified v2 source selected above.
 
 ### Option A — Manual setup
 

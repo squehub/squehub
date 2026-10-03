@@ -1,6 +1,6 @@
 # Upgrade from SqueHub v1.x
 
-SqueHub v2 is a new generation. Migrate an application in a separate branch or copy, keep its data backup, and test each boundary before switching traffic. The [public v1.x guide](https://squehub.com/docs/v1.x) remains the reference for deployed v1 applications. There is no automatic whole-application upgrade command and v2.0.0 is not yet a published release.
+SqueHub v2 is a new generation. Migrate an application in a separate branch or copy, keep its data backup, and test each boundary before switching traffic. The [v1.x guide](https://squehub.com/docs/v1.x) remains the reference for v1 applications. There is no automatic whole-application upgrade command; select and verify an exact v2 source ref before applying this guide.
 
 ## API and project changes
 

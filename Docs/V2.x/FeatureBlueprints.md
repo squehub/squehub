@@ -1,6 +1,6 @@
 # SqueHub Feature Blueprint
 
-A **SqueHub Feature Blueprint** plans the structural starting point for one application capability. `make:feature` combines the existing generator, routing, API Resource, testing, Package ownership, and reviewable-change contracts into one `ChangePlan`. The command is available in the v2.0.0 development working tree; v2.0.0 is not yet a published stable release.
+A **SqueHub Feature Blueprint** plans the structural starting point for one application capability. `make:feature` combines the existing generator, routing, API Resource, testing, Package ownership, and reviewable-change contracts into one `ChangePlan`. It is available through the v2 `squehub` CLI.
 
 ```bash
 php squehub make:feature Post --preview

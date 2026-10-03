@@ -33,7 +33,7 @@ final class AgentMcpTest extends TestCase
         $client->connect(new StdioTransport(PHP_BINARY, ['squehub', 'agent:mcp'], self::root()));
         try {
             self::assertSame(ProtocolVersion::V2025_11_25, $client->getProtocolVersion());
-            self::assertSame('2.0.0-dev', $client->getServerInfo()?->version);
+            self::assertSame('2.0.0', $client->getServerInfo()?->version);
 
             $resources = $client->listResources()->resources;
             $uris = array_map(static fn ($resource): string => $resource->uri, $resources);
@@ -45,7 +45,7 @@ final class AgentMcpTest extends TestCase
             self::assertInstanceOf(TextResourceContents::class, $framework[0]);
             $context = json_decode($framework[0]->text, true, 512, JSON_THROW_ON_ERROR);
             self::assertSame('2025-11-25', $context['protocol']['supported_stdio']);
-            self::assertSame('2.0.0-dev', $context['framework']['version']);
+            self::assertSame('2.0.0', $context['framework']['version']);
 
             $names = array_map(static fn ($tool): string => $tool->name, $client->listTools()->tools);
             self::assertContains('search_docs', $names);
@@ -81,7 +81,7 @@ final class AgentMcpTest extends TestCase
                     'clientInfo' => ['name' => 'SqueHub live client', 'version' => '1.0.0'],
                 ]);
                 self::assertSame('2025-11-25', $init['result']['protocolVersion'] ?? null);
-                self::assertSame('2.0.0-dev', $init['result']['serverInfo']['version'] ?? null);
+                self::assertSame('2.0.0', $init['result']['serverInfo']['version'] ?? null);
 
                 $input->write(json_encode(['jsonrpc' => '2.0',
                     'method' => 'notifications/initialized'], JSON_THROW_ON_ERROR) . "\n");

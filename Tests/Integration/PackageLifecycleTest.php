@@ -486,6 +486,33 @@ final class PackageLifecycleTest extends TestCase
         }
     }
 
+    public function testArchiveFileUrlsAndLowercaseRepositoryIdentityAreNotInstallSources(): void
+    {
+        $project = new TemporaryProject();
+        $sources = new TemporaryProject();
+        try {
+            $sources->write('Media.zip', 'not a Package directory');
+            $packages = new PackageManager(new Application($project->path()));
+            foreach ([
+                $sources->path('Media.zip'),
+                'file:///Media',
+                'https://example.test/Media.zip',
+                'https://github.com/squehub/media/releases/download/v1.0.0/squehub-media-1.0.0.zip',
+                'https://github.com/squehub/media',
+            ] as $source) {
+                try {
+                    $packages->planInstall($source);
+                    self::fail('Unsupported source form was accepted: ' . $source);
+                } catch (PackageException) {
+                    self::assertDirectoryDoesNotExist($project->path('Project/Packages/Media'));
+                }
+            }
+        } finally {
+            $sources->remove();
+            $project->remove();
+        }
+    }
+
     public function testLinkedLocalSourceIsRejectedBeforePreviewWrites(): void
     {
         $project = new TemporaryProject();

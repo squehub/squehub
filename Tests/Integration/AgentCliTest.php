@@ -48,7 +48,8 @@ final class AgentCliTest extends TestCase
         self::assertSame(0, $status->getExitCode(), $status->getOutput() . $status->getErrorOutput());
         $data = json_decode(trim($status->getOutput()), true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('SqueHub', $data['framework']['name']);
-        self::assertSame('2.0.0-dev', $data['framework']['version']);
+        self::assertSame('2.0.0', $data['framework']['version']);
+        self::assertArrayNotHasKey('release', $data['framework']);
         self::assertSame('2025-11-25', $data['protocol']['supported_stdio']);
         self::assertSame('read-only', $data['mode']);
         self::assertFalse($data['remote_http']);
