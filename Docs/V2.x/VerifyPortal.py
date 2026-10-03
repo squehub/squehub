@@ -75,6 +75,14 @@ def has_visible_v2(source: str) -> bool:
 
 MAX_STATIC_ASSETS = 64
 MAX_STATIC_ASSET_BYTES = 2 * 1024 * 1024
+UNRESOLVED_DOC_TOKEN = re.compile(r'DOCSTOKEN\d+END')
+
+
+def unresolved_doc_token_issue(page: str, body: str) -> str | None:
+    """Reject visible renderer placeholders before publication checks pass."""
+    if UNRESOLVED_DOC_TOKEN.search(body):
+        return f'{page}: unresolved documentation token'
+    return None
 
 
 def local_asset_path(value: str) -> str | None:
@@ -246,10 +254,14 @@ def main() -> None:
     }
     parsed: dict[tuple[str, str], ArticleParser] = {}
     for key, page in pages.items():
+        fragment = (args.catalog / page['fragment']).read_text(encoding='utf-8')
         document = ArticleParser()
-        document.feed((args.catalog / page['fragment']).read_text(encoding='utf-8'))
+        document.feed(fragment)
         parsed[key] = document
         issues.extend(f'{key}: {problem}' for problem in document.problems)
+        token_issue = unresolved_doc_token_issue(str(key), fragment)
+        if token_issue:
+            issues.append(token_issue)
 
     # Internal development records are deliberately omitted from the public
     # catalog. Guides that cite them must point to the curated public status.
@@ -478,6 +490,9 @@ def main() -> None:
                 status, headers, body = response(base, path)
                 http_pages += 1
                 asset_paths.update(referenced_assets(body))
+                token_issue = unresolved_doc_token_issue(path, body)
+                if token_issue:
+                    issues.append(token_issue)
                 if status != 200 or '<title>' not in body or 'rel="canonical"' not in body:
                     issues.append(f'{path} status/metadata invalid: {status}')
                 if ('src="/assets/docs/js/docs.js?v=20261003e"' not in body

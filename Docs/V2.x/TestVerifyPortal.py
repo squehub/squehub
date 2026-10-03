@@ -7,7 +7,8 @@ import unittest
 from unittest.mock import patch
 
 from VerifyPortal import (MAX_STATIC_ASSETS, header_value, referenced_assets,
-                          static_asset_issue, static_response, verify_static_assets)
+                          static_asset_issue, static_response, unresolved_doc_token_issue,
+                          verify_static_assets)
 
 
 def social_png() -> bytes:
@@ -16,6 +17,16 @@ def social_png() -> bytes:
 
 
 class PublicAssetVerificationTest(unittest.TestCase):
+    def test_unresolved_renderer_tokens_fail_local_and_live_document_checks(self) -> None:
+        for page in ("('v2.x', 'packages')", '/docs/v2.x/packages'):
+            with self.subTest(page=page):
+                self.assertEqual(
+                    unresolved_doc_token_issue(page, '<a>DOCSTOKEN3END</a>'),
+                    f'{page}: unresolved documentation token',
+                )
+                self.assertIsNone(unresolved_doc_token_issue(
+                    page, '<a href="/docs/v2.x/packages"><code>Package</code></a>'))
+
     def test_local_asset_404_is_reported_without_fetching_external_urls(self) -> None:
         html = '''
 <link rel="stylesheet" href="/assets/docs/css/site.css?v=1">

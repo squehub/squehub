@@ -35,6 +35,25 @@ class PublicStatusLinkTest(unittest.TestCase):
             'Read <a href="/docs/v2.x/installation#requirements">installation</a>.',
         )
 
+    def test_code_inside_link_label_is_restored_without_placeholder_text(self) -> None:
+        rendered = inline(
+            "Read [`squehub`](https://github.com/squehub) and "
+            "[`php squehub setup` and `APP_KEY`](Installation.md#configure-the-environment).",
+            self.public_stems,
+        )
+        self.assertEqual(
+            rendered,
+            'Read <a href="https://github.com/squehub"><code>squehub</code></a> and '
+            '<a href="/docs/v2.x/installation#configure-the-environment">'
+            '<code>php squehub setup</code> and <code>APP_KEY</code></a>.',
+        )
+        self.assertNotIn("DOCSTOKEN", rendered)
+
+    def test_code_inside_rejected_link_label_remains_visible_without_link(self) -> None:
+        rendered = inline("Unsafe [`key`](file:///private/key).", self.public_stems)
+        self.assertEqual(rendered, "Unsafe <code>key</code>.")
+        self.assertNotIn("DOCSTOKEN", rendered)
+
 
 class TableRenderingTest(unittest.TestCase):
     def test_wide_markdown_table_has_keyboard_scroll_region_and_semantic_table(self) -> None:

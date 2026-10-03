@@ -203,7 +203,10 @@ def inline(source: str, public_stems: dict[str, str]) -> str:
     output = html.escape(source)
     output = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", output)
     output = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"<em>\1</em>", output)
-    for index, markup in enumerate(tokens):
+    # Links may contain protected inline code. Restore outer tokens first so
+    # their inner markers are still present when those code tokens are restored.
+    for index in range(len(tokens) - 1, -1, -1):
+        markup = tokens[index]
         output = output.replace(f"DOCSTOKEN{index}END", markup)
     return output
 
