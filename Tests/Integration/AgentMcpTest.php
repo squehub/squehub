@@ -67,10 +67,10 @@ final class AgentMcpTest extends TestCase
         for ($run = 0; $run < 2; ++$run) {
             $input = new InputStream();
             $process = new Process([PHP_BINARY, 'squehub', 'agent:mcp'], self::root());
-            // Symfony's timeout spans the entire multi-request server run;
-            // idle timeout still detects a stalled STDIO exchange promptly.
-            $process->setTimeout(30);
-            $process->setIdleTimeout(10);
+            // A cold Windows PHP process may need more time for the first
+            // handshake; subsequent STDIO exchanges keep a tighter limit.
+            $process->setTimeout(60);
+            $process->setIdleTimeout(30);
             $process->setInput($input);
             $process->start();
             $output = '';
@@ -82,6 +82,7 @@ final class AgentMcpTest extends TestCase
                 ]);
                 self::assertSame('2025-11-25', $init['result']['protocolVersion'] ?? null);
                 self::assertSame('2.0.0', $init['result']['serverInfo']['version'] ?? null);
+                $process->setIdleTimeout(10);
 
                 $input->write(json_encode(['jsonrpc' => '2.0',
                     'method' => 'notifications/initialized'], JSON_THROW_ON_ERROR) . "\n");
@@ -180,9 +181,10 @@ final class AgentMcpTest extends TestCase
     {
         $input->write(json_encode(['jsonrpc' => '2.0', 'id' => $id, 'method' => $method,
             'params' => $params], JSON_THROW_ON_ERROR) . "\n");
-        $received = $process->waitUntil(static function (string $type, string $data)
-            use (&$output, &$responses, $id): bool {
-            if ($type !== Process::OUT) return false;
+        // waitUntil() can drain a fast reply before it installs its callback.
+        // The iterator includes already-buffered output as well as later frames.
+        foreach ($process->getIterator(Process::ITER_KEEP_OUTPUT) as $type => $data) {
+            if ($type !== Process::OUT) continue;
             $output .= $data;
             while (($end = strpos($output, "\n")) !== false) {
                 $line = substr($output, 0, $end);
@@ -193,9 +195,9 @@ final class AgentMcpTest extends TestCase
                     $responses[$frame['id']] = $frame;
                 }
             }
-            return isset($responses[$id]);
-        });
-        self::assertTrue($received, $process->getErrorOutput());
+            if (isset($responses[$id])) break;
+        }
+        self::assertTrue(isset($responses[$id]), $process->getErrorOutput());
         self::assertArrayHasKey($id, $responses);
         return $responses[$id];
     }
