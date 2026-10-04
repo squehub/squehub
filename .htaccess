@@ -1,5 +1,32 @@
 RewriteEngine On
+
+# Root-hosted installations must keep framework source and private state out
+# of Apache's direct-file path. The public/ document root remains preferred.
+RewriteRule (^|/)\. - [F,L]
+RewriteRule ^(?:App|Bootstrap|Config|Database|Documentation|Project|Scripts|Storage|vendor|Tests)(?:/|$) - [F,L,NC]
+# On case-insensitive hosts Apache may resolve lowercase /docs to a local
+# Docs/ directory. Refuse only an actual request for its uppercase source URL.
+RewriteCond %{THE_REQUEST} \s/+Docs(?:[/?]|\s)
+RewriteRule ^Docs(?:/|$) - [F,L]
+RewriteRule ^(?:composer\.(?:json|lock)|phpunit\.xml(?:\.dist)?|phpstan\.neon|config\.php|Bootstrap\.php|Router\.php|Database\.php|squehub|README\.md|CONTRIBUTING\.md)$ - [F,L,NC]
+
+# A direct public/ URL is not a second browser-facing asset namespace. The
+# original request condition distinguishes it from an internal rewrite.
+RewriteCond %{THE_REQUEST} \s/+public(?:[/?]|\s) [NC]
+RewriteRule ^public(?:/|$) - [F,L,NC]
+
+# Only the canonical lowercase /assets URL is public. Both Apache document
+# roots and the PHP development server use the same guarded resolver, which
+# prefers Assets/ and retains public/assets for generated frontend output.
+# Apache on Windows may case-fold a request to the physical Assets directory;
+# inspect the original URL before refusing that noncanonical spelling.
+RewriteCond %{THE_REQUEST} \s/+Assets(?:[/?]|\s)
+RewriteRule ^Assets(?:/|$) - [F,L]
+RewriteRule ^assets(?:/|$) index.php [QSA,L,NC]
+
+# A local Docs/ directory must not shadow the lowercase /docs route on
+# case-insensitive development filesystems.
+RewriteRule ^docs(?:/|$) index.php [QSA,L,NC]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [QSA,L]
-

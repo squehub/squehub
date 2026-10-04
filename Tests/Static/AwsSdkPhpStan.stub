@@ -1,0 +1,96 @@
+<?php
+
+/**
+ * PHPStan-only signatures for the optional AWS SDK v3 bridge. Composer does
+ * not autoload this .stub file; it is never a runtime replacement for the SDK.
+ * Methods mirror the AWS SDK's S3Client command surface and uploader/copier.
+ */
+
+namespace Aws\S3;
+
+interface S3ClientInterface {}
+
+class S3Client implements S3ClientInterface
+{
+    /** @param array<string,mixed> $config */
+    public function __construct(array $config) {}
+    /**
+     * @param array<string,mixed> $args
+     * @return \ArrayAccess<string,mixed>
+     */
+    public function headObject(array $args): \ArrayAccess {}
+    /**
+     * @param array<string,mixed> $args
+     * @return \ArrayAccess<string,mixed>
+     */
+    public function getObject(array $args): \ArrayAccess {}
+    /**
+     * @param array<string,mixed> $args
+     * @return \ArrayAccess<string,mixed>
+     */
+    public function putObject(array $args): \ArrayAccess {}
+    /**
+     * @param array<string,mixed> $args
+     * @return \ArrayAccess<string,mixed>
+     */
+    public function deleteObject(array $args): \ArrayAccess {}
+    /**
+     * @param array<string,mixed> $args
+     * @return \ArrayAccess<string,mixed>
+     */
+    public function deleteObjects(array $args): \ArrayAccess {}
+    /**
+     * @param array<string,mixed> $args
+     * @return \ArrayAccess<string,mixed>
+     */
+    public function listObjectsV2(array $args): \ArrayAccess {}
+    /**
+     * @param array<string,mixed> $args
+     * @return \ArrayAccess<string,mixed>
+     */
+    public function abortMultipartUpload(array $args): \ArrayAccess {}
+}
+
+class ObjectUploader
+{
+    /**
+     * @param resource|string|object $body
+     * @param array<string,mixed> $options
+     */
+    public function __construct(S3ClientInterface $client, string $bucket, string $key,
+        $body, ?string $acl = 'private', array $options = []) {}
+    public function upload(): mixed {}
+}
+
+class ObjectCopier
+{
+    /**
+     * @param array<string,string> $source
+     * @param array<string,string> $destination
+     * @param array<string,mixed> $options
+     */
+    public function __construct(S3ClientInterface $client, array $source, array $destination,
+        ?string $acl = 'private', array $options = []) {}
+    public function copy(): mixed {}
+}
+
+namespace Aws\Exception;
+
+class AwsException extends \RuntimeException
+{
+    public function getStatusCode(): ?int {}
+    public function getAwsErrorCode(): ?string {}
+}
+
+class MultipartUploadException extends \RuntimeException
+{
+    public function getState(): \Aws\Multipart\UploadState {}
+}
+
+namespace Aws\Multipart;
+
+class UploadState
+{
+    /** @return array<string,mixed> */
+    public function getId(): array {}
+}
