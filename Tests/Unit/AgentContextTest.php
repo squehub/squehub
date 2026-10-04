@@ -102,16 +102,19 @@ PHP);
     {
         $project = TestApplication::temporary();
         try {
-            $project->write('Docs/V2.x/Agent.md', "Agent routing example.\nAPP_KEY=PRIVATE_EXAMPLE routing\n");
+            $project->write('Documentation/Agent.md', "Agent routing example.\nAPP_KEY=PRIVATE_EXAMPLE routing\n");
+            $project->write('Docs/V2.x/Internal.md', 'INTERNAL_DOCS_SENTINEL');
             $agent = new AgentManager($project->application());
             $result = $agent->tool('search_docs', ['query' => 'routing', 'limit' => 1]);
             self::assertSame('observed', $result['state']);
             self::assertCount(1, $result['items']);
-            self::assertSame('Docs/V2.x/Agent.md', $result['items'][0]['path']);
+            self::assertSame('Documentation/Agent.md', $result['items'][0]['path']);
             self::assertTrue($result['truncated']);
             $second = $agent->tool('search_docs', ['query' => 'PRIVATE_EXAMPLE']);
             self::assertStringNotContainsString('PRIVATE_EXAMPLE',
                 json_encode($second, JSON_THROW_ON_ERROR));
+            $internal = $agent->tool('search_docs', ['query' => 'INTERNAL_DOCS_SENTINEL']);
+            self::assertSame([], $internal['items']);
             foreach ([['query' => '.'], ['query' => "route\nsecret"],
                 ['query' => 'routing', 'limit' => 21]] as $bad) {
                 try {

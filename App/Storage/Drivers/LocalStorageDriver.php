@@ -8,6 +8,7 @@ use App\Storage\StorageDriver;
 use App\Storage\StorageException;
 use App\Storage\StoragePath;
 use App\Storage\StorageStream;
+use App\Support\PhysicalPath;
 use DateTimeImmutable;
 use DateTimeZone;
 
@@ -275,10 +276,8 @@ final class LocalStorageDriver implements StorageDriver
         foreach (explode('/', $tail) as $part) {
             if ($part === '') continue;
             $current = rtrim($current, '/') . '/' . $part;
-            if (is_link($current)) throw new StorageException('Storage root cannot contain a symbolic link.');
-            if (!file_exists($current)) continue;
-            $real = realpath($current);
-            if ($real === false || !self::samePath(str_replace('\\', '/', $real), $current)) {
+            if (!file_exists($current) && @lstat($current) === false) continue;
+            if (!PhysicalPath::unlinked($current)) {
                 throw new StorageException('Storage root contains a reparse or linked path.');
             }
         }
@@ -305,21 +304,18 @@ final class LocalStorageDriver implements StorageDriver
     {
         if (!$internal) StoragePath::validate($path, true);
         $current = $this->root;
-        $root = str_replace('\\', '/', realpath($this->root) ?: $this->root);
         foreach (explode('/', $path) as $part) {
             if ($part === '') continue;
             $current .= '/' . $part;
-            if (is_link($current)) throw StorageException::forPath('link rejected', $path);
             if (file_exists($current)) {
-                $resolved = realpath($current);
-                if ($resolved === false) throw StorageException::forPath('resolve', $path);
-                $resolved = str_replace('\\', '/', $resolved);
-                if (!self::contained($resolved, $root)) {
-                    throw StorageException::forPath('containment', $path);
-                }
-                if (!self::samePath($resolved, $current)) {
+                if (!PhysicalPath::unlinked($current)) {
                     throw StorageException::forPath('link rejected', $path);
                 }
+                if (!PhysicalPath::within($current, $this->root)) {
+                    throw StorageException::forPath('containment', $path);
+                }
+            } elseif (@lstat($current) !== false) {
+                throw StorageException::forPath('link rejected', $path);
             }
         }
         return $current;
@@ -411,15 +407,4 @@ final class LocalStorageDriver implements StorageDriver
         return str_starts_with($path, '/') || preg_match('/^[A-Za-z]:\//', $path) === 1 || str_starts_with($path, '//');
     }
 
-    private static function samePath(string $first, string $second): bool
-    {
-        return DIRECTORY_SEPARATOR === '\\' ? strcasecmp($first, $second) === 0 : $first === $second;
-    }
-
-    private static function contained(string $path, string $root): bool
-    {
-        $prefix = rtrim($root, '/') . '/';
-        if (DIRECTORY_SEPARATOR === '\\') return str_starts_with(strtolower($path . '/'), strtolower($prefix));
-        return str_starts_with($path . '/', $prefix);
-    }
 }

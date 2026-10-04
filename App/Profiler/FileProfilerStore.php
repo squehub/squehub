@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Profiler;
 
+use App\Support\PhysicalPath;
 use JsonException;
 use Throwable;
 
@@ -28,20 +29,32 @@ final class FileProfilerStore implements ProfilerStore
             throw new ProfilerException('Profiler application root is unavailable.');
         }
         $this->base = rtrim(str_replace('\\', '/', $base), '/');
-        $this->root = rtrim(str_replace('\\', '/', $root), '/');
-        $comparison = DIRECTORY_SEPARATOR === '\\' ? strtolower($this->root) : $this->root;
-        $baseComparison = DIRECTORY_SEPARATOR === '\\' ? strtolower($this->base) : $this->base;
-        if (!str_starts_with($comparison, $baseComparison . '/')
-            || preg_match('/[\x00-\x1f\x7f]/', $this->root)) {
+        $requested = rtrim(str_replace('\\', '/', $root), '/');
+        if ($requested === '' || preg_match('/[\x00-\x1f\x7f]/', $requested)) {
             throw new ProfilerException('Profiler root must be inside the Application.');
         }
-        $relative = substr($this->root, strlen($this->base) + 1);
-        $this->parts = explode('/', $relative);
+        // Walk the requested spelling back to the existing Application root.
+        // A Windows 8.3 alias can make a textual prefix check reject that root.
+        $cursor = $requested;
+        $parts = [];
+        while (!PhysicalPath::same($cursor, $this->base)) {
+            $parent = str_replace('\\', '/', dirname($cursor));
+            if ($parent === $cursor || count($parts) > 64) {
+                throw new ProfilerException('Profiler root must be inside the Application.');
+            }
+            $parts[] = basename($cursor);
+            $cursor = $parent;
+        }
+        if (!PhysicalPath::unlinked($cursor) || $parts === []) {
+            throw new ProfilerException('Profiler root must be inside the Application.');
+        }
+        $this->parts = array_reverse($parts);
         foreach ($this->parts as $part) {
             if ($part === '' || $part === '.' || $part === '..') {
                 throw new ProfilerException('Profiler root path is invalid.');
             }
         }
+        $this->root = $this->base . '/' . implode('/', $this->parts);
     }
 
     public function save(ProfileRecord $profile, int $now): void
@@ -115,28 +128,21 @@ final class FileProfilerStore implements ProfilerStore
         $parent = $this->base;
         foreach ($this->parts as $part) {
             $candidate = $parent . '/' . $part;
-            if (is_link($candidate) || (file_exists($candidate) && !is_dir($candidate))) {
+            if (@lstat($candidate) !== false && !PhysicalPath::unlinked($candidate)) {
                 throw new ProfilerException('Profiler directory is unsafe.');
             }
             if (!is_dir($candidate) && !@mkdir($candidate, 0700) && !is_dir($candidate)) {
                 throw new ProfilerException('Profiler directory cannot be created.');
             }
-            $resolved = realpath($candidate);
-            if ($resolved === false || !is_dir($resolved)
-                || !self::same(dirname(str_replace('\\', '/', $resolved)), $parent)) {
+            if (!is_dir($candidate) || !PhysicalPath::unlinked($candidate)
+                || !PhysicalPath::same(dirname($candidate), $parent)) {
                 throw new ProfilerException('Profiler directory escaped the Application.');
             }
-            $parent = str_replace('\\', '/', $resolved);
+            $parent = $candidate;
         }
-        if (!self::same($parent, $this->root)) {
+        if (!PhysicalPath::same($parent, $this->root)) {
             throw new ProfilerException('Profiler directory is unsafe.');
         }
-    }
-
-    private static function same(string $left, string $right): bool
-    {
-        return DIRECTORY_SEPARATOR === '\\'
-            ? strcasecmp($left, $right) === 0 : $left === $right;
     }
 
     private function path(string $id): string

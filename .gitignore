@@ -11,11 +11,9 @@
 .idea/
 *.sublime-*
 
-# Local test overrides and generated documentation output
+# Local test overrides and documentation
 /phpunit.xml
-/Docs/V2.x/PortalBuild/
-/Docs/V2.x/PortalSite/
-/Docs/V2.x/__pycache__/
+/Docs/
 
 # Operating system files
 .DS_Store

@@ -36,6 +36,7 @@ final class DevelopmentServerSecurityTest extends TestCase
             '/composer.json',
             '/App/Clis/Clis.php',
             '/Bootstrap/DevelopmentServer.php',
+            '/Documentation/README.md',
             '/.htaccess',
             '/%2e%2e/squehub',
         ] as $path) {

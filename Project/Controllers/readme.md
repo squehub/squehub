@@ -27,4 +27,4 @@ use Project\Controllers\WelcomeController;
 Route::path('/welcome')->get([WelcomeController::class, 'index']);
 ```
 
-See [Routing](../../Docs/V2.x/Routing.md) for methods, route parameters, groups, and middleware.
+See the [official routing guide](https://www.squehub.com/docs/v2.x/routing) for methods, route parameters, groups, and middleware.

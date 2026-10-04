@@ -90,13 +90,47 @@ final class TemporaryProjectCleanupTest extends TestCase
             }
             unlink($project->path('secret.txt'));
             self::assertTrue(is_link($link));
-            self::assertFalse(file_exists($link));
+            self::assertFileDoesNotExist($project->path('secret.txt'));
 
             $project->remove();
 
             self::assertDirectoryDoesNotExist($project->path());
         } finally {
             $project->remove();
+        }
+    }
+
+    public function testWindowsJunctionIsRemovedWithoutTraversingItsOutsideTarget(): void
+    {
+        if (PHP_OS_FAMILY !== 'Windows' || !function_exists('exec')) {
+            self::markTestSkipped('Directory junctions require Windows command execution.');
+        }
+
+        $project = new TemporaryProject();
+        $outside = new TemporaryProject();
+        $link = $project->path('public/linked');
+        try {
+            $project->write('public/ordinary.txt', 'ordinary');
+            $outside->write('Protected/keep.txt', 'outside directory');
+            $command = 'cmd /d /s /c mklink /J "' . str_replace('/', '\\', $link)
+                . '" "' . str_replace('/', '\\', $outside->path('Protected')) . '"';
+            $output = [];
+            @exec($command, $output, $status);
+            if ($status !== 0) {
+                self::markTestSkipped('Directory junction creation is unavailable to this process.');
+            }
+
+            $project->remove();
+
+            self::assertDirectoryDoesNotExist($project->path());
+            self::assertSame('outside directory',
+                file_get_contents($outside->path('Protected/keep.txt')));
+        } finally {
+            if (file_exists($link) || is_link($link)) {
+                @rmdir($link);
+            }
+            $project->remove();
+            $outside->remove();
         }
     }
 }

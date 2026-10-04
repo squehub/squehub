@@ -12,6 +12,7 @@ use App\Frontend\FrontendManager;
 use App\Http\Response;
 use App\Packages\PackageManager;
 use App\Packages\PackageFiles;
+use App\Support\PhysicalPath;
 use App\View\Compiler\CompilerException;
 use App\View\Compiler\TemplateCompiler;
 use App\View\Compiled\CompiledViewStore;
@@ -195,15 +196,16 @@ class View
             $resolved = realpath($candidate);
             if ($resolved !== false && is_dir($resolved)
                 && $physicalRoot !== false && self::isWithin($resolved, $physicalRoot)
-                && !isset($seenViewPaths[$resolved])) {
-                $seenViewPaths[$resolved] = true;
+                && !isset($seenViewPaths[PhysicalPath::identity($resolved) ?? $resolved])) {
+                $seenViewPaths[PhysicalPath::identity($resolved) ?? $resolved] = true;
                 self::$viewPaths[] = $candidate;
             }
         }
 
         foreach (self::$packageManager?->active() ?? [] as $package) {
             $packageRoot = realpath($package->path());
-            if ($packageRoot === false || !is_dir($packageRoot) || is_link($package->path())) {
+            if ($packageRoot === false || !is_dir($packageRoot)
+                || !PhysicalPath::unlinked($package->path())) {
                 throw new \LogicException('Enabled Package directory is unavailable or linked.');
             }
             foreach (['Views', 'views'] as $viewDirectory) {
@@ -212,12 +214,12 @@ class View
                     continue;
                 }
                 $possibleViewPath = realpath($candidate);
-                if ($possibleViewPath === false || is_link($candidate)
-                    || dirname($possibleViewPath) !== $packageRoot) {
+                if ($possibleViewPath === false || !PhysicalPath::unlinked($candidate)
+                    || !PhysicalPath::same(dirname($possibleViewPath), $packageRoot)) {
                     throw new \LogicException('Enabled Package view directory is unsafe.');
                 }
-                if (!isset($seenViewPaths[$possibleViewPath])) {
-                    $seenViewPaths[$possibleViewPath] = true;
+                if (!isset($seenViewPaths[PhysicalPath::identity($possibleViewPath) ?? $possibleViewPath])) {
+                    $seenViewPaths[PhysicalPath::identity($possibleViewPath) ?? $possibleViewPath] = true;
                     self::$viewPaths[] = $possibleViewPath . '/';
                 }
                 break;
@@ -1155,17 +1157,13 @@ class View
 
     private static function isWithin(string $path, string $root): bool
     {
-        $path = str_replace('\\', '/', $path);
-        $root = rtrim(str_replace('\\', '/', $root), '/');
-        $prefix = $root . '/';
-        return DIRECTORY_SEPARATOR === '\\'
-            ? strncasecmp($path, $prefix, strlen($prefix)) === 0
-            : str_starts_with($path, $prefix);
+        return !PhysicalPath::same($path, $root) && PhysicalPath::within($path, $root);
     }
 
     private static function relativePath(string $path, string $base): string
     {
-        return str_replace('\\', '/', substr($path, strlen(rtrim($base, '/\\')) + 1));
+        return PhysicalPath::relativeTo($path, $base)
+            ?? throw new \LogicException('View path is outside its application root.');
     }
 
     private static function legacyBasePath(): string
@@ -1296,10 +1294,7 @@ class View
 
     private static function samePhysicalPath(string $left, string $right): bool
     {
-        $left = str_replace('\\', '/', $left);
-        $right = str_replace('\\', '/', $right);
-        return DIRECTORY_SEPARATOR === '\\'
-            ? strcasecmp($left, $right) === 0 : $left === $right;
+        return PhysicalPath::same($left, $right);
     }
 
     private static function compiledStore(): CompiledViewStore

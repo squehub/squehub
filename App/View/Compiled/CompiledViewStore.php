@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\View\Compiled;
 
+use App\Support\PhysicalPath;
+
 /**
  * Owns immutable compiled PHP under one Application's Storage/Views directory.
  * Source text and compiler output are framed into the identity; runtime data
@@ -296,20 +298,11 @@ final class CompiledViewStore
         if (is_link($path)) {
             throw new CompiledViewException('Compiled View storage contains an unsafe link.');
         }
-        if (!file_exists($path)) {
+        if (@lstat($path) === false) {
             return;
         }
-        $physical = realpath($path);
-        if ($physical === false || !self::samePath($path, $physical)) {
+        if (!PhysicalPath::unlinked($path)) {
             throw new CompiledViewException('Compiled View storage contains an unsafe path.');
         }
-    }
-
-    private static function samePath(string $left, string $right): bool
-    {
-        $left = rtrim(str_replace('\\', '/', $left), '/');
-        $right = rtrim(str_replace('\\', '/', $right), '/');
-        return DIRECTORY_SEPARATOR === '\\'
-            ? strcasecmp($left, $right) === 0 : $left === $right;
     }
 }

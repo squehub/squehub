@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Clis;
 
+use App\Support\PhysicalPath;
 use RuntimeException;
 
 /**
@@ -16,20 +17,9 @@ final class PackageRemoval
     {
         $base = realpath($basePath);
         $parent = dirname($target);
-        $resolvedParent = realpath($parent);
-        if ($base === false || $resolvedParent === false || is_link($parent)
-            || !self::same($resolvedParent, $parent)) {
+        if ($base === false || !PhysicalPath::unlinked($parent)
+            || !PhysicalPath::same($parent, $base . '/Project/Packages')) {
             throw new RuntimeException('Package directory is not a safe project path.');
-        }
-        $canonicalBase = self::normalize($base);
-        $canonicalParent = self::normalize($parent);
-        $prefix = $canonicalBase . '/';
-        $inside = DIRECTORY_SEPARATOR === '\\'
-            ? str_starts_with(strtolower($canonicalParent), strtolower($prefix))
-            : str_starts_with($canonicalParent, $prefix);
-        $relative = $inside ? substr($canonicalParent, strlen($prefix)) : '';
-        if (strtolower($relative) !== 'project/packages') {
-            throw new RuntimeException('Package directory is outside Project/Packages.');
         }
         self::assertPhysical($target);
         if (!is_dir($target)) throw new RuntimeException('Package directory is unavailable.');
@@ -60,22 +50,8 @@ final class PackageRemoval
 
     private static function assertPhysical(string $path): void
     {
-        if (is_link($path) || !file_exists($path)) throw new RuntimeException('Package contains an unavailable or linked path.');
-        $real = realpath($path);
-        if ($real === false || !self::same($real, $path)) {
+        if (!PhysicalPath::unlinked($path)) {
             throw new RuntimeException('Package contains a linked or reparsed path.');
         }
-    }
-
-    private static function same(string $a, string $b): bool
-    {
-        $a = self::normalize($a);
-        $b = self::normalize($b);
-        return DIRECTORY_SEPARATOR === '\\' ? strcasecmp($a, $b) === 0 : $a === $b;
-    }
-
-    private static function normalize(string $path): string
-    {
-        return rtrim(str_replace('\\', '/', $path), '/');
     }
 }

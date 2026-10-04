@@ -1,6 +1,16 @@
-# SqueHub
-
-**The PHP Framework for Modern Web Builders.** Simple to use. Powerful underneath.
+<div align="center">
+  <a href="https://www.squehub.com/">
+    <img src="public/assets/img/squehub-icon.png" alt="SqueHub logo" width="96">
+  </a>
+  <h1>SqueHub</h1>
+  <p><strong>The PHP Framework for Modern Web Builders.</strong><br>Simple to use. Powerful underneath.</p>
+  <p>
+    <a href="https://github.com/squehub/squehub/actions/workflows/ci.yml"><img src="https://github.com/squehub/squehub/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+    <a href="https://www.php.net/"><img src="https://img.shields.io/badge/PHP-8.2%2B-777bb4" alt="PHP 8.2 or newer"></a>
+    <a href="https://www.squehub.com/docs/v2.x"><img src="https://img.shields.io/badge/docs-v2.x-247899" alt="Documentation"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license"></a>
+  </p>
+</div>
 
 SqueHub brings routing, Views, data, security, background work, and developer tools into one PHP application framework. Your application lives in `Project/`; framework internals live in `App/`.
 
@@ -15,6 +25,8 @@ This README describes SqueHub v2.0.0. Select a versioned v2 release when install
 - Organize applications with Packages and Kits. Optional frontend profiles support Vite, React, and Vue; PHP Views require no Node.js build.
 
 The [official v2 documentation](https://www.squehub.com/docs/v2.x) describes the public APIs, examples, and feature-specific limits.
+
+The same public guides are available in this source checkout at [Documentation/README.md](Documentation/README.md).
 
 ## Requirements
 
@@ -87,6 +99,7 @@ Database/     Migrations, Seeders, and Factories
 Project/      Application routes, controllers, models, Views, Packages, and Kits
 public/       Web document root and public assets
 Storage/      Private runtime data
+Documentation/ Public framework guides in this source checkout
 squehub       CLI entry point
 ```
 

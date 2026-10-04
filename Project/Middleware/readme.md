@@ -24,6 +24,6 @@ final class CacheControl
 }
 ```
 
-Reference a class with `->through(CacheControl::class)` or give it an alias in `Config/Routing.php`. The framework already supplies the `auth` and `guest` aliases; use `->through('auth')` to protect a route. The removed starter `AuthMiddleware` was a pass-through example and did not enforce authentication.
+Reference a class with `->through(CacheControl::class)` or give it an alias in `Config/Routing.php`. The framework supplies the `auth` and `guest` aliases; use `->through('auth')` to protect a route. A custom middleware must enforce its own policy.
 
-See [Middleware](../../Docs/V2.x/Middleware.md) for route examples, alias registration, and execution order.
+See the [official middleware guide](https://www.squehub.com/docs/v2.x/middleware) for route examples, alias registration, and execution order.

@@ -25,6 +25,7 @@ use App\Security\SignedUrl\SignedUrlServiceProvider;
 use App\Security\Csrf\CsrfServiceProvider;
 use App\Session\SessionServiceProvider;
 use App\Storage\StorageServiceProvider;
+use App\Support\PhysicalPath;
 use App\Translation\TranslationServiceProvider;
 use App\Validation\ValidationServiceProvider;
 use DirectoryIterator;
@@ -129,12 +130,11 @@ final class TestApplication
                 throw new InvalidArgumentException('Test application path is unsafe.');
             }
             $cursor .= '/' . $part;
-            if (is_link($cursor)) {
-                throw new InvalidArgumentException('Test application path contains a link.');
-            }
-            if (file_exists($cursor)) {
-                $resolved = realpath($cursor);
-                if ($resolved === false || !$this->contains(str_replace('\\', '/', $resolved))) {
+            if (@lstat($cursor) !== false) {
+                if (!PhysicalPath::unlinked($cursor)) {
+                    throw new InvalidArgumentException('Test application path contains a link.');
+                }
+                if (!PhysicalPath::within($cursor, $this->root)) {
                     throw new InvalidArgumentException('Test application path leaves its root.');
                 }
             }
@@ -267,9 +267,7 @@ final class TestApplication
         if ($this->cleaned) {
             return;
         }
-        $resolved = realpath($this->root);
-        if (is_link($this->root) || $resolved === false
-            || !$this->samePath(str_replace('\\', '/', $resolved), $this->root)) {
+        if (!PhysicalPath::unlinked($this->root)) {
             throw new RuntimeException('Temporary test application root changed before cleanup.');
         }
         // Windows cannot remove an open SQLite file. Release this fixture's
@@ -277,9 +275,10 @@ final class TestApplication
         // connection belonging to another Application.
         if ($this->application?->isBooted()
             && $this->application->container()->has(DatabaseManager::class)) {
+            /** @var DatabaseManager $databases */
             $databases = $this->application->container()->make(DatabaseManager::class);
             foreach (array_keys($this->config['database']['connections']) as $name) {
-                $databases->disconnect($name);
+                $databases->disconnect((string) $name);
             }
         }
         $this->removeTree($this->root);
@@ -298,14 +297,24 @@ final class TestApplication
             if (!$this->contains($path)) {
                 throw new RuntimeException('Temporary test application cleanup left its root.');
             }
+            $entry = @lstat($path);
+            $kind = $entry === false ? null : ($entry['mode'] & 0170000);
+            // PHP reports Windows junctions as neither links nor directories.
+            // Remove their directory entry with rmdir without visiting its target.
+            if (PHP_OS_FAMILY === 'Windows' && $kind === 0) {
+                if (!@rmdir($path)) {
+                    throw new RuntimeException('Unable to remove a temporary test application link.');
+                }
+                continue;
+            }
             if ($item->isLink() || !$item->isDir()) {
-                if (!@unlink($path)) {
+                if (!@unlink($path) && !(PHP_OS_FAMILY === 'Windows' && @rmdir($path))) {
                     throw new RuntimeException('Unable to remove a temporary test application file.');
                 }
                 continue;
             }
-            $resolved = realpath($path);
-            if ($resolved === false || !$this->contains(str_replace('\\', '/', $resolved))) {
+            if (!PhysicalPath::unlinked($path)
+                || !PhysicalPath::within($path, $this->root)) {
                 throw new RuntimeException('Temporary test application directory left its root.');
             }
             $this->removeTree($path);
@@ -323,12 +332,6 @@ final class TestApplication
             $path = strtolower($path);
         }
         return $path === $root || str_starts_with($path, $root . '/');
-    }
-
-    private function samePath(string $left, string $right): bool
-    {
-        return PHP_OS_FAMILY === 'Windows'
-            ? strcasecmp($left, $right) === 0 : $left === $right;
     }
 
     private function assertActive(): void

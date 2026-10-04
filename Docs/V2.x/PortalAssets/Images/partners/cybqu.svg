@@ -1,8 +1,0 @@
-<!-- Mark and casing from the official CybQu header at https://www.cybqu.com/ (reviewed 2026-10-03). -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" role="img" aria-labelledby="title">
-  <title id="title">CybQu Technologies</title>
-  <svg x="2" y="3" width="38" height="38" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M6 13a6 6 0 1 1 6 6" stroke="#7c5cff" stroke-width="2" stroke-linecap="round"/>
-  </svg>
-  <text x="43" y="30" fill="#24243a" font-family="Inter, Arial, sans-serif" font-size="27" font-weight="750" letter-spacing="-.9">CybQu</text>
-</svg>

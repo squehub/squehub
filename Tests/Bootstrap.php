@@ -16,9 +16,13 @@ register_shutdown_function(static function () use ($testRoot): void {
     $remove = static function (string $path) use (&$remove): void {
         // An earlier cleanup may leave a broken link; never recurse into a
         // directory link or leave it behind because file_exists() is false.
-        if (is_link($path)) {
-            if (!@unlink($path)) {
-                rmdir($path); // Windows may require rmdir() for directory links.
+        $entry = @lstat($path);
+        $kind = $entry === false ? null : ($entry['mode'] & 0170000);
+        if (is_link($path) || (PHP_OS_FAMILY === 'Windows' && $kind === 0)) {
+            if (PHP_OS_FAMILY === 'Windows' && $kind === 0) {
+                @rmdir($path);
+            } elseif (!@unlink($path)) {
+                @rmdir($path); // Windows may require rmdir() for directory links.
             }
             return;
         }

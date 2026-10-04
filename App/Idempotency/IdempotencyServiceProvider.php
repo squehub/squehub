@@ -53,9 +53,12 @@ final class IdempotencyServiceProvider extends ServiceProvider
                 $maxRequest = self::integer($settings['max_request_bytes'] ?? 1048576, 1, 1048576);
                 $maxResponse = self::integer($settings['max_response_bytes'] ?? 32768, 1, 32768);
                 if ($retention <= $lease) throw new IdempotencyException('Idempotency retention must exceed the lease.');
-                $selection = new InfrastructureSelection($driver, 'file',
-                    $container->has(RedisManager::class) ? $container->make(RedisManager::class) : null,
-                    $redisName);
+                // Container::make() returns object, while class bindings are
+                // checked against their requested type by the container.
+                /** @var RedisManager|null $redis */
+                $redis = $container->has(RedisManager::class)
+                    ? $container->make(RedisManager::class) : null;
+                $selection = new InfrastructureSelection($driver, 'file', $redis, $redisName);
                 try {
                     $selected = $selection->resolve();
                 } catch (RedisException $failure) {
@@ -71,28 +74,39 @@ final class IdempotencyServiceProvider extends ServiceProvider
                     // needs an explicit stable namespace across all nodes.
                     throw new IdempotencyException('Idempotency shared backend requires an explicit namespace.');
                 }
+                /** @var DatabaseManager|null $database */
                 $database = $container->has(DatabaseManager::class)
                     ? $container->make(DatabaseManager::class) : null;
-                $store = match ($selected) {
-                    'array' => new ArrayIdempotencyStore(),
-                    'file' => new FileIdempotencyStore($path ?? $app->basePath('Storage/Idempotency'), $namespace),
-                    'database' => $database === null
-                        ? throw new IdempotencyException('Database idempotency requires the Database provider.')
-                        : new DatabaseIdempotencyStore($database->connection($databaseName)),
-                    'redis' => !$container->has(RedisManager::class)
-                        ? throw new IdempotencyException('Redis idempotency requires the Redis provider.')
-                        : new RedisIdempotencyStore($container->make(RedisManager::class)->connection($redisName),
-                            $namespace),
-                    default => throw new IdempotencyException('Unsupported idempotency backend.'),
-                };
+                // Keep backend failures beside their constructors. A missing
+                // provider must never become an implicit local-store fallback.
+                if ($selected === 'array') {
+                    $store = new ArrayIdempotencyStore();
+                } elseif ($selected === 'file') {
+                    $store = new FileIdempotencyStore(
+                        $path ?? $app->basePath('Storage/Idempotency'), $namespace);
+                } elseif ($selected === 'database') {
+                    if ($database === null) {
+                        throw new IdempotencyException('Database idempotency requires the Database provider.');
+                    }
+                    $store = new DatabaseIdempotencyStore($database->connection($databaseName));
+                } elseif ($selected === 'redis') {
+                    if ($redis === null) {
+                        throw new IdempotencyException('Redis idempotency requires the Redis provider.');
+                    }
+                    $store = new RedisIdempotencyStore($redis->connection($redisName), $namespace);
+                } else {
+                    throw new IdempotencyException('Unsupported idempotency backend.');
+                }
                 if ($requireShared && $selected === 'database'
-                    && $database?->connection($databaseName)->driver() !== 'mysql') {
+                    && ($database === null || $database->connection($databaseName)->driver() !== 'mysql')) {
                     throw new IdempotencyException('Shared idempotency requires a MySQL database connection.');
                 }
                 if (!$container->has(AuthManager::class)) {
                     throw new IdempotencyException('Authenticated idempotency requires the Auth provider.');
                 }
-                return new IdempotencyManager($store, $container->make(AuthManager::class),
+                /** @var AuthManager $auth */
+                $auth = $container->make(AuthManager::class);
+                return new IdempotencyManager($store, $auth,
                     $database?->clock() ?? new \App\Database\SystemModelClock(),
                     $namespace, $lease, $retention, $maxRequest, $maxResponse, $selected);
             });
@@ -101,8 +115,11 @@ final class IdempotencyServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $container = $this->app->container();
-        Idempotency::setResolver(static fn (): IdempotencyManager =>
-            $container->make(IdempotencyManager::class));
+        Idempotency::setResolver(static function () use ($container): IdempotencyManager {
+            /** @var IdempotencyManager $manager */
+            $manager = $container->make(IdempotencyManager::class);
+            return $manager;
+        });
     }
 
     private static function integer(mixed $value, int $min, int $max): int

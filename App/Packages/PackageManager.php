@@ -15,6 +15,7 @@ use App\Changes\ChangeResult;
 use App\Contributions\ContributionOwner;
 use App\Foundation\Application;
 use App\Plugins\ServiceProvider;
+use App\Support\PhysicalPath;
 use Symfony\Component\Process\Process;
 use Throwable;
 use WeakMap;
@@ -1253,9 +1254,7 @@ final class PackageManager
 
     private function samePath(string $left, string $right): bool
     {
-        $left = str_replace('\\', '/', realpath($left) ?: $left);
-        $right = str_replace('\\', '/', realpath($right) ?: $right);
-        return DIRECTORY_SEPARATOR === '\\' ? strcasecmp($left, $right) === 0 : $left === $right;
+        return PhysicalPath::same($left, $right);
     }
 
     /** Check again after staging, including a newly created broken link. */

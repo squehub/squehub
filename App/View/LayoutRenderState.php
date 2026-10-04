@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\View;
 
+use App\Support\PhysicalPath;
 use App\View\Assets\AssetException;
 use App\View\Assets\AssetRenderState;
 use App\View\Compiler\CompilerException;
@@ -273,12 +274,11 @@ final class LayoutRenderState
     /** Physical identity is shared by layout and include cycle checks. */
     private static function physicalIdentity(string $path, string $view, int $line): string
     {
-        $physical = realpath($path);
-        if ($physical === false) {
+        $identity = PhysicalPath::identity($path);
+        if ($identity === null) {
             throw new CompilerException($view, $line, 'The View source is unavailable.');
         }
-        $identity = str_replace('\\', '/', $physical);
-        return DIRECTORY_SEPARATOR === '\\' ? strtolower($identity) : $identity;
+        return $identity;
     }
 
     /**

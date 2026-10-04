@@ -18,7 +18,7 @@ composer test
 
 For manual application testing, copy `.example.env` to a private `.env`, run `php squehub key:generate`, and put the printed value in `APP_KEY`. Then run `php squehub doctor` and `php squehub start`. The key generator prints a value but does not edit `.env`. Never commit `.env`, credentials, tokens, or runtime data.
 
-Application examples belong under `Project/`; framework changes belong under `App/`, `Bootstrap/`, and the related canonical directories. Add or update focused tests under `Tests/`. Put v2 guidance under `Docs/V2.x/`, and prefer `App\Plugins` in developer-facing examples. Keep comments useful for contracts and security boundaries, and use the existing style and PHP 8.2-compatible syntax.
+Application examples belong under `Project/`; framework changes belong under `App/`, `Bootstrap/`, and the related canonical directories. Add or update focused tests under `Tests/`. Describe public API changes in the pull request and propose matching updates for the [official documentation](https://www.squehub.com/docs/v2.x). Prefer `App\Plugins` in developer-facing examples. Keep comments useful for contracts and security boundaries, and use the existing style and PHP 8.2-compatible syntax.
 
 Before proposing a change, run the relevant focused tests and the full suite where practical. Also run:
 

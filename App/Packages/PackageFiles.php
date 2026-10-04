@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Packages;
 
 use App\Clis\PackageRemoval;
+use App\Support\PhysicalPath;
 
 /**
  * Contained, physical Package trees and their owned file fingerprints.
@@ -38,7 +39,10 @@ final class PackageFiles
         array $ancestors = []
     ): void
     {
-        $physical = self::physical($directory);
+        $physical = PhysicalPath::identity($directory);
+        if ($physical === null) {
+            throw new PackageException('Package path cannot be resolved.');
+        }
         if (in_array($physical, $ancestors, true)) {
             throw new PackageException('Package View directory link is cyclic.');
         }
@@ -46,7 +50,7 @@ final class PackageFiles
         foreach (self::entries($directory, $excludeGit) as $entry) {
             $path = $directory . '/' . $entry;
             $childIsView = $insideViews || ($viewRoot !== null
-                && self::physical($path) === $viewRoot);
+                && PhysicalPath::same($path, $viewRoot));
             self::inspectEntry($path, $childIsView ? $viewRoot : null);
             if (is_dir($path)) {
                 self::walkSafe($path, false, $viewRoot, $childIsView, $ancestors);
@@ -88,7 +92,10 @@ final class PackageFiles
     ): void
     {
         $directory = $relative === '' ? $root : $root . '/' . $relative;
-        $physical = self::physical($directory);
+        $physical = PhysicalPath::identity($directory);
+        if ($physical === null) {
+            throw new PackageException('Package path cannot be resolved.');
+        }
         if (in_array($physical, $ancestors, true)) {
             throw new PackageException('Package View directory link is cyclic.');
         }
@@ -97,7 +104,7 @@ final class PackageFiles
             $child = ltrim($relative . '/' . $entry, '/');
             $path = $root . '/' . $child;
             $childIsView = $insideViews || ($viewRoot !== null
-                && self::physical($path) === $viewRoot);
+                && PhysicalPath::same($path, $viewRoot));
             $resolved = self::inspectEntry($path, $childIsView ? $viewRoot : null);
             if (is_dir($path)) {
                 self::walk($root, $child, $files, false, $viewRoot, $childIsView, $ancestors);
@@ -113,9 +120,13 @@ final class PackageFiles
             // A link target is part of source identity even when two targets
             // have the same bytes. Store only its path relative to Views.
             if ($childIsView && $viewRoot !== null
-                && $resolved !== self::lexical($path)) {
+                && !PhysicalPath::unlinked($path)) {
+                $relativeTarget = PhysicalPath::relativeTo($resolved, $viewRoot);
+                if ($relativeTarget === null || $relativeTarget === '') {
+                    throw new PackageException('Package View link leaves its View root.');
+                }
                 $hash = hash('sha256', "view-link\0"
-                    . substr($resolved, strlen($viewRoot) + 1) . "\0" . $hash);
+                    . $relativeTarget . "\0" . $hash);
             }
             $files[str_replace('\\', '/', $child)] = $hash;
         }
@@ -169,17 +180,9 @@ final class PackageFiles
         return rtrim(str_replace('\\', '/', $resolved), '/');
     }
 
-    private static function lexical(string $path): string
-    {
-        return rtrim(str_replace('\\', '/', $path), '/');
-    }
-
     private static function isWithin(string $path, string $root): bool
     {
-        $prefix = $root . '/';
-        return DIRECTORY_SEPARATOR === '\\'
-            ? strncasecmp($path, $prefix, strlen($prefix)) === 0
-            : strncmp($path, $prefix, strlen($prefix)) === 0;
+        return !PhysicalPath::same($path, $root) && PhysicalPath::within($path, $root);
     }
 
     /** @return list<string> All physical directories relative to the Package root. */
@@ -302,9 +305,8 @@ final class PackageFiles
     /** Remove only a caller-created temporary tree immediately below its parent. */
     public static function removeTemporary(string $target, string $parent): void
     {
-        $resolvedParent = realpath($parent);
-        if ($resolvedParent === false || !is_dir($target)
-            || dirname(str_replace('\\', '/', $target)) !== str_replace('\\', '/', $parent)) {
+        if (!is_dir($parent) || !is_dir($target)
+            || !PhysicalPath::same(dirname($target), $parent)) {
             throw new PackageException('Temporary Package path is outside its expected parent.');
         }
         self::assertPhysical($target);
@@ -341,23 +343,11 @@ final class PackageFiles
         }
     }
 
-    /** Reject symlinks, junctions, and paths whose physical location differs. */
+    /** Reject symlinks, junctions, and redirected ancestor entries. */
     public static function assertPhysical(string $path): void
     {
-        if (is_link($path) || !file_exists($path)) {
+        if (!PhysicalPath::unlinked($path)) {
             throw new PackageException('Package path is unavailable or linked.');
-        }
-        $resolved = realpath($path);
-        if ($resolved === false) {
-            throw new PackageException('Package path cannot be resolved.');
-        }
-        $actual = rtrim(str_replace('\\', '/', $resolved), '/');
-        $expected = rtrim(str_replace('\\', '/', $path), '/');
-        $same = DIRECTORY_SEPARATOR === '\\'
-            ? strcasecmp($actual, $expected) === 0
-            : $actual === $expected;
-        if (!$same) {
-            throw new PackageException('Package path escapes through a linked or reparsed entry.');
         }
     }
 }

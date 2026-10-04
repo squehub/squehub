@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SqueHub\Tests\Fixtures;
 
 use DirectoryIterator;
+use LogicException;
 
 final class TemporaryProject
 {
@@ -12,7 +13,16 @@ final class TemporaryProject
 
     public function __construct()
     {
-        $this->path = BASE_DIR . '/app-' . bin2hex(random_bytes(6));
+        // Tests/Bootstrap.php owns this isolated root. Resolve the dynamic
+        // constant explicitly so standalone analysis can verify the fixture.
+        if (!defined('BASE_DIR')) {
+            throw new LogicException('SqueHub test bootstrap is required.');
+        }
+        $base = constant('BASE_DIR');
+        if (!is_string($base) || $base === '') {
+            throw new LogicException('SqueHub test bootstrap root is invalid.');
+        }
+        $this->path = $base . '/app-' . bin2hex(random_bytes(6));
         mkdir($this->path . '/config', 0777, true);
     }
 
@@ -35,9 +45,13 @@ final class TemporaryProject
         $delete = static function (string $path) use (&$delete): void {
             // Check links first: directory links must not be traversed, and a link
             // remains present even when its target was removed earlier in the walk.
-            if (is_link($path)) {
-                if (!@unlink($path)) {
-                    rmdir($path); // Windows may require rmdir() for directory links.
+            $entry = @lstat($path);
+            $kind = $entry === false ? null : ($entry['mode'] & 0170000);
+            if (is_link($path) || (PHP_OS_FAMILY === 'Windows' && $kind === 0)) {
+                if (PHP_OS_FAMILY === 'Windows' && $kind === 0) {
+                    @rmdir($path);
+                } elseif (!@unlink($path)) {
+                    @rmdir($path); // Windows may require rmdir() for directory links.
                 }
                 return;
             }

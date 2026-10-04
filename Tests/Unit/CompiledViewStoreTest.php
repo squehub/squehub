@@ -58,8 +58,15 @@ final class CompiledViewStoreTest extends TestCase
         $compiled = '<?php echo "hello";';
         $first = $store->prepare('Pages.Home', 'hello source', $compiled, 'template');
         self::assertTrue($first['compiled']);
-        self::assertStringStartsWith(str_replace('\\', '/',
-            $this->project->path('Storage/Views/squehub-view-')), $first['path']);
+        $expectedRoot = stat($this->project->path('Storage/Views'));
+        $actualRoot = stat(dirname($first['path']));
+        self::assertIsArray($expectedRoot);
+        self::assertIsArray($actualRoot);
+        // Windows may spell the same temporary directory with a DOS 8.3 alias.
+        self::assertSame([$expectedRoot['dev'], $expectedRoot['ino']],
+            [$actualRoot['dev'], $actualRoot['ino']]);
+        self::assertMatchesRegularExpression('/\Asquehub-view-[0-9a-f]{64}\.php\z/D',
+            basename($first['path']));
         self::assertSame($compiled, file_get_contents($first['path']));
         $mtime = filemtime($first['path']);
         $second = $store->prepare('Pages.Home', 'hello source', $compiled, 'template');

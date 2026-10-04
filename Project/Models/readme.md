@@ -18,4 +18,4 @@ final class User extends Model
 }
 ```
 
-The table and its columns must exist before this model is queried. See [Models](../../Docs/V2.x/Models.md) for queries, persistence, casts, timestamps, relationships, scopes, and soft deletes.
+The table and its columns must exist before this model is queried. See the [official Models guide](https://www.squehub.com/docs/v2.x/models) for queries, persistence, casts, timestamps, relationships, scopes, and soft deletes.

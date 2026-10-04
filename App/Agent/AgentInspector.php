@@ -21,9 +21,10 @@ final class AgentInspector
     }
 
     /**
-     * Search only the installed framework's V2.x Markdown tree. Entries and
-     * ancestors must be physical, so an application link cannot redirect a
-     * search to .env, Storage, another drive, or a network share.
+     * Search only the installed public Documentation tree. Internal Docs
+     * reports are outside this root. Entries and ancestors must be physical,
+     * so an application link cannot redirect a search to .env, Storage,
+     * another drive, or a network share.
      *
      * @return array{state:string,items:list<array{path:string,line:int,excerpt:string}>,truncated:bool}
      */
@@ -35,7 +36,7 @@ final class AgentInspector
             || $limit < 1 || $limit > 20) {
             throw new AgentException('Documentation search arguments are invalid.');
         }
-        $root = $this->app->basePath('Docs/V2.x');
+        $root = $this->app->basePath('Documentation');
         if (!is_dir($root) || is_link($root)) {
             return ['state' => 'unavailable', 'items' => [], 'truncated' => false];
         }

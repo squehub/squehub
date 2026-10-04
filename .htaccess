@@ -3,8 +3,8 @@ RewriteEngine On
 # Root-hosted installations must keep framework source and private state out
 # of Apache's direct-file path. The public/ document root remains preferred.
 RewriteRule (^|/)\. - [F,L]
-RewriteRule ^(?:App|Bootstrap|Config|Database|Project|Scripts|Storage|vendor|Tests)(?:/|$) - [F,L,NC]
-# On case-insensitive hosts Apache may resolve lowercase /docs to the tracked
+RewriteRule ^(?:App|Bootstrap|Config|Database|Documentation|Project|Scripts|Storage|vendor|Tests)(?:/|$) - [F,L,NC]
+# On case-insensitive hosts Apache may resolve lowercase /docs to a local
 # Docs/ directory. Refuse only an actual request for its uppercase source URL.
 RewriteCond %{THE_REQUEST} \s/+Docs(?:[/?]|\s)
 RewriteRule ^Docs(?:/|$) - [F,L]
@@ -24,7 +24,7 @@ RewriteCond %{THE_REQUEST} \s/+Assets(?:[/?]|\s)
 RewriteRule ^Assets(?:/|$) - [F,L]
 RewriteRule ^assets(?:/|$) index.php [QSA,L,NC]
 
-# The tracked Docs/ directory must not shadow the lowercase /docs route on
+# A local Docs/ directory must not shadow the lowercase /docs route on
 # case-insensitive development filesystems.
 RewriteRule ^docs(?:/|$) index.php [QSA,L,NC]
 RewriteCond %{REQUEST_FILENAME} !-f
