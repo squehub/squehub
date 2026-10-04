@@ -23,7 +23,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: curl, mbstring, pdo_sqlite, sqlite3, sodium, xml, zip
+          extensions: curl, fileinfo, mbstring, pdo_sqlite, sqlite3, sodium, xml, zip
           tools: composer:v2
           coverage: none
 
