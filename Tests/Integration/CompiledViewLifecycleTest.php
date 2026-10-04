@@ -235,9 +235,8 @@ final class CompiledViewLifecycleTest extends TestCase
             self::assertInstanceOf(Throwable::class, $clearFailure);
             self::assertSame([], glob($outside->path('*.php')) ?: []);
         } finally {
-            if (is_link($cache)) {
-                unlink($cache);
-            }
+            // The fixture cleanup removes directory links without traversal.
+            $this->project->remove();
             $outside->remove();
         }
     }

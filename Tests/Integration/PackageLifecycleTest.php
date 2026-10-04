@@ -290,9 +290,6 @@ final class PackageLifecycleTest extends TestCase
             self::assertNotEmpty($descriptors[0]->errors());
             self::assertFileExists($project->path('Outside/Linked.php'));
         } finally {
-            if (is_link($link)) {
-                unlink($link);
-            }
             $project->remove();
         }
     }
@@ -533,11 +530,8 @@ final class PackageLifecycleTest extends TestCase
                 self::assertFileDoesNotExist($project->path('Project/Activation.json'));
             }
         } finally {
-            if (is_link($link)) {
-                unlink($link);
-            }
-            $sourceRoot->remove();
             $project->remove();
+            $sourceRoot->remove();
         }
     }
 

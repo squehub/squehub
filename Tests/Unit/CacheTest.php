@@ -33,7 +33,11 @@ final class CacheTest extends TestCase
         if (!is_dir($this->root)) return;
         $remove = static function (string $path) use (&$remove): void {
             if (is_link($path)) {
-                unlink($path);
+                // Windows can represent a directory link as a directory for
+                // unlink(); rmdir() removes only the link, never its target.
+                if (!@unlink($path) && !@rmdir($path)) {
+                    throw new RuntimeException('Cache test link could not be removed.');
+                }
             } elseif (is_dir($path)) {
                 foreach (new \DirectoryIterator($path) as $item) {
                     if (!$item->isDot()) $remove($item->getPathname());

@@ -114,7 +114,6 @@ final class KitFilesystemSafetyTest extends TestCase
             self::assertFileDoesNotExist($project->path('Outside/Shop.php'));
             self::assertSame('untouched', file_get_contents($project->path('Outside/Keep.txt')));
         } finally {
-            if (is_link($linked)) { unlink($linked); }
             $source->remove();
             $project->remove();
         }
